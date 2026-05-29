@@ -3,6 +3,11 @@
   'use strict';
 
   const PD = window.PartnerDashboard;
+  if (!PD || !PD.state) {
+    console.error('PartnerDashboard data engine not loaded. Ensure data-engine.js is in the same directory as index.html.');
+    return;
+  }
+
   const ui = {
     page: 'empty',
     selectedPartnerKey: null,
@@ -14,7 +19,7 @@
   const $ = (sel) => document.querySelector(sel);
 
   function hasData() {
-    return (PD.state.model.opportunities || []).length > 0;
+    return (PD.state?.model?.opportunities || []).length > 0;
   }
 
   function isNonPartner(name) {

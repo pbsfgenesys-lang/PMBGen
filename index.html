@@ -189,7 +189,16 @@
     </section>
   </main>
 
-  <script src="data-engine.js"></script>
-  <script src="app.js"></script>
+  <script src="./data-engine.js"></script>
+  <script>
+    if (!window.PartnerDashboard) {
+      document.body.insertAdjacentHTML('afterbegin',
+        '<div style="margin:16px;padding:16px;background:#fee4e2;border:1px solid #fca5a5;border-radius:8px;font:14px/1.4 system-ui,sans-serif;color:#7f1d1d;">' +
+        '<strong>Dashboard failed to load.</strong> The file <code>data-engine.js</code> did not load. ' +
+        'Upload <code>index.html</code>, <code>app.js</code>, <code>data-engine.js</code>, and <code>styles.css</code> into the same folder, then open this page again. ' +
+        'Check the browser Network tab for 404 errors.</div>');
+    }
+  </script>
+  <script src="./app.js"></script>
 </body>
 </html>
