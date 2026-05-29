@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Partner Performance Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="loading" class="loading-overlay" aria-live="polite">Reading exports and rebuilding views…</div>
+
+  <header class="banner">
+    <div class="banner-top">
+      <div>
+        <p class="eyebrow">Solution Consulting · Partner enablement</p>
+        <h1>Partner Performance Dashboard</h1>
+        <p>How self-sufficient are partner pre-sales teams — and where is Genesys SC time still going?</p>
+      </div>
+      <span id="status-pill" class="status-pill">No data loaded</span>
+    </div>
+    <nav class="tabs" aria-label="Main navigation">
+      <button type="button" class="tab active" data-page="overview">Overview</button>
+      <button type="button" class="tab" data-page="partners">Partner scorecard</button>
+      <button type="button" class="tab" data-page="detail" disabled>Partner detail</button>
+      <button type="button" class="tab admin-link" data-page="admin">Admin</button>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section id="page-empty" class="page active">
+      <div class="empty-hero">
+        <h2>Upload exports to begin</h2>
+        <p>Load your Salesforce task report, opportunity report, and Seismic learning CSV. All processing happens in your browser — nothing is uploaded to a server.</p>
+        <button type="button" class="btn btn-primary" id="goto-admin">Go to Admin · load files</button>
+      </div>
+    </section>
+
+    <section id="page-overview" class="page">
+      <div class="toolbar">
+        <label>Search
+          <input type="search" id="global-search" placeholder="Partner, opportunity, owner">
+        </label>
+        <label>View
+          <select id="view-mode">
+            <option value="partners">Partners only</option>
+            <option value="all">Include Genesys-direct</option>
+          </select>
+        </label>
+        <span class="note" id="overview-note"></span>
+      </div>
+      <div id="overview-kpis" class="kpis"></div>
+      <div id="overview-insight"></div>
+      <div class="grid-2">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Partner watchlist</h2>
+              <p>Ranked by independence risk — click a row for detail</p>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Partner</th>
+                  <th>Band</th>
+                  <th>Opps</th>
+                  <th>SC hrs</th>
+                  <th>Learning</th>
+                  <th>Signal</th>
+                </tr>
+              </thead>
+              <tbody id="watchlist-body"></tbody>
+            </table>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Partner maturity</h2>
+              <p>Learning investment vs Genesys SC reliance (medians)</p>
+            </div>
+          </div>
+          <div class="axis-labels"><span>Low SC hrs/opp</span><span>High SC hrs/opp</span></div>
+          <div id="quadrants" class="quadrants"></div>
+          <div class="axis-labels"><span>Low learning</span><span>High learning</span></div>
+        </article>
+      </div>
+      <p id="direct-footnote" class="footnote hidden"></p>
+    </section>
+
+    <section id="page-partners" class="page">
+      <div class="toolbar">
+        <label>Sort by
+          <select id="partner-sort">
+            <option value="riskScore">Independence risk</option>
+            <option value="totalHours">SC hours</option>
+            <option value="learningSeconds">Learning time</option>
+            <option value="winRate">Win rate</option>
+            <option value="avgHoursPerOpp">SC hrs / opp</option>
+          </select>
+        </label>
+        <label>View
+          <select id="view-mode-scorecard">
+            <option value="partners">Partners only</option>
+            <option value="all">Include Genesys-direct</option>
+          </select>
+        </label>
+        <button type="button" class="btn" id="export-partners">Export CSV</button>
+      </div>
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Partner scorecard</h2>
+            <p>Enablement, pipeline, and Genesys reliance in one view</p>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Partner</th>
+                <th>Band</th>
+                <th>Opps</th>
+                <th>SC hrs</th>
+                <th>SC hrs/opp</th>
+                <th>Learning</th>
+                <th>Win rate</th>
+                <th>Signal</th>
+              </tr>
+            </thead>
+            <tbody id="scorecard-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="page-detail" class="page">
+      <button type="button" class="back-link" id="detail-back">← Back to overview</button>
+      <div id="detail-hero" class="detail-hero"></div>
+      <div class="subtabs" id="detail-subtabs">
+        <button type="button" class="subtab active" data-sub="pipeline">Pipeline</button>
+        <button type="button" class="subtab" data-sub="learning">Learning</button>
+        <button type="button" class="subtab" data-sub="sc">SC effort</button>
+      </div>
+      <div id="detail-panels"></div>
+    </section>
+
+    <section id="page-admin" class="page">
+      <div class="admin-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Load data</h2>
+              <p>Salesforce tasks, opportunities, and Seismic learning CSV</p>
+            </div>
+            <button type="button" class="btn btn-danger" id="clear-data">Clear all</button>
+          </div>
+          <div id="drop-zone" class="drop" tabindex="0" role="button">
+            <p><strong>Drop files here</strong> or click to choose</p>
+            <p class="muted">.xlsx · Salesforce .xls · .csv</p>
+          </div>
+          <input id="file-input" type="file" accept=".xlsx,.xls,.csv" multiple hidden>
+          <ul id="loaded-files" class="file-list"></ul>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Data quality</h2>
+              <p>Task–opportunity join diagnostics</p>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <tbody id="quality-body"></tbody>
+            </table>
+          </div>
+          <div class="panel-head" style="border-top: 1px solid var(--line);">
+            <div><h2>Unmatched task opportunities</h2><p>Top hours not linked to an opportunity row</p></div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Opportunity name</th><th>SC hours</th></tr></thead>
+              <tbody id="unmatched-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="data-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
