@@ -24,7 +24,7 @@
 
   function isNonPartner(name) {
     const n = (name || '').toLowerCase();
-    return /direct\s*\/?\s*no partner|indirect\s*\/?\s*no partner|^direct$|^indirect$/.test(n);
+    return /direct\s*\/?\s*no partner|indirect\s*\/?\s*no partner|end customer\s*\/?\s*no partner|^direct$|^indirect$|^no partner named$/.test(n);
   }
 
   function derived() {
@@ -223,13 +223,21 @@
 
   function renderFootnote(d) {
     const direct = directSummary(d);
+    const endCustomer = d.partnerSummary.find((p) => /end customer/i.test(p.partnerGroup));
     const foot = $('#direct-footnote');
-    if (!direct || ui.includeDirect) {
+    if ((!direct && !endCustomer) || ui.includeDirect) {
       foot.classList.add('hidden');
       return;
     }
     foot.classList.remove('hidden');
-    foot.textContent = `Genesys-direct pipeline (${direct.partnerGroup}): ${PD.formatInt(direct.opportunityCount)} opps · ${PD.formatHours(direct.totalHours)} SC hours — excluded from partner rankings. Toggle view to include.`;
+    const parts = [];
+    if (direct) {
+      parts.push(`Genesys-direct pipeline (${direct.partnerGroup}): ${PD.formatInt(direct.opportunityCount)} opps · ${PD.formatHours(direct.totalHours)} SC hours`);
+    }
+    if (endCustomer) {
+      parts.push(`end-customer accounts mis-tagged in the partner field (${endCustomer.partnerGroup}): ${PD.formatInt(endCustomer.opportunityCount)} opps`);
+    }
+    foot.textContent = `${parts.join('; ')} — excluded from partner rankings. Toggle view to include.`;
   }
 
   function renderScorecard(partners, medians) {
@@ -332,6 +340,8 @@
       <tr><td>Opportunities</td><td>${PD.formatInt(m.baseStats.opportunitiesImported || m.opportunities.length)}</td></tr>
       <tr><td>Tasks (deduped)</td><td>${PD.formatInt(m.tasks.length)}</td></tr>
       <tr><td>Learning rows (deduped)</td><td>${PD.formatInt((m.learningRows || []).length)}</td></tr>
+      <tr><td>Partner domain mappings (manual CSV)</td><td>${PD.formatInt(m.baseStats.partnerMappingsImported || 0)}</td></tr>
+      <tr><td>Auto domain mappings</td><td>${PD.formatInt(m.baseStats.autoDomainMappings || 0)}</td></tr>
       <tr><td>Task–opp match rate</td><td><strong>${matchRate !== null ? PD.formatPercent(matchRate) : '–'}</strong></td></tr>
       <tr><td>Unmatched task names</td><td>${PD.formatInt((m.unmatchedTaskAgg || []).length)}</td></tr>
     ` : '<tr><td colspan="2" class="muted">Load files to see diagnostics.</td></tr>';
@@ -340,6 +350,31 @@
     $('#unmatched-body').innerHTML = unmatched.length
       ? unmatched.map((r) => `<tr><td>${PD.escapeHtml(r.opportunityName)}</td><td>${PD.formatHours(r.totalHours)}</td></tr>`).join('')
       : '<tr><td colspan="2" class="muted">None</td></tr>';
+
+    const report = m.domainMappingReport || { autoMapped: [], ambiguous: [], unmapped: [] };
+    const dmBody = $('#domain-mapping-body');
+    if (dmBody) {
+      const rows = (report.autoMapped || []).slice(0, 20);
+      dmBody.innerHTML = rows.length
+        ? rows.map((r) => `<tr><td>${PD.escapeHtml(r.domain)}</td><td>${PD.escapeHtml(r.partner)}</td><td>${PD.escapeHtml(r.confidence || '')}</td><td>${PD.formatInt(r.learners)}</td><td>${formatDuration(r.learningSeconds)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="muted">Load opportunities + learning to infer domain mappings</td></tr>';
+    }
+
+    const ambBody = $('#ambiguous-domain-body');
+    if (ambBody) {
+      const rows = (report.ambiguous || []).slice(0, 12);
+      ambBody.innerHTML = rows.length
+        ? rows.map((r) => `<tr><td>${PD.escapeHtml(r.domain)}</td><td>${PD.escapeHtml(r.bestPartner || '')}</td><td class="muted">${PD.escapeHtml(r.alternatives || '')}</td><td>${PD.formatInt(r.learners)}</td></tr>`).join('')
+        : '<tr><td colspan="4" class="muted">No ambiguous domains</td></tr>';
+    }
+
+    const unmatchedLearning = (m.unmatchedLearningPartners || []).slice(0, 12);
+    const ulBody = $('#unmatched-learning-body');
+    if (ulBody) {
+      ulBody.innerHTML = unmatchedLearning.length
+        ? unmatchedLearning.map((r) => `<tr><td>${PD.escapeHtml(r.partnerGroup)}</td><td>${formatDuration(r.learningSeconds)}</td><td>${PD.formatInt(r.learnerCount)}</td></tr>`).join('')
+        : '<tr><td colspan="3" class="muted">None — learning partners all matched opportunity export</td></tr>';
+    }
 
     $('#loaded-files').innerHTML = (m.files || []).length
       ? m.files.map((f) => `<li><strong>${PD.escapeHtml(f.fileName)}</strong><br><span class="muted">${PD.formatInt(f.taskRows)} tasks · ${PD.formatInt(f.oppRows + (f.mappedRows || 0))} opps · ${PD.formatInt(f.learningRows || 0)} learning</span></li>`).join('')

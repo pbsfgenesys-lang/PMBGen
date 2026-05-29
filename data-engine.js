@@ -183,17 +183,13 @@
     return cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   }
 
-  const DOMAIN_PARTNER_MAP = {
-    'accenture.com': 'Accenture UK Limited',
-    'bt.com': 'British Telecommunications PLC',
-    'sabiogroup.com': 'Sabio Ltd',
-    'ipintegration.com': 'IP Integration Limited',
-    'kerv.com': 'Kerv Experience Limited',
-    'kervgroup.com': 'Kerv Experience Limited',
-    'maintel.co.uk': 'Maintel Europe Limited',
-    'weconnect.tech': 'Connect Managed Services (UK) Limited',
-    'capgemini.com': 'Capgemini UK PLC'
-  };
+  const PARTNER_NAME_STOP_WORDS = new Set(['limited', 'ltd', 'plc', 'uk', 'holdings', 'business', 'services', 'service', 'group', 'inc', 'llc', 'gmbh', 'sa', 'bv', 'the', 'and', 'europe', 'international', 'solutions', 'technology', 'technologies', 'consulting', 'communications', 'telecommunications']);
+
+  const INTERNAL_LEARNING_DOMAINS = new Set([
+    'genesys.com',
+    'seismic.com',
+    'genesyslab.com'
+  ]);
 
   const PARTNER_ALIASES = [
     { label: 'Accenture UK Limited', keys: ['accenture uk limited', 'accenture'] },
@@ -206,9 +202,183 @@
     { label: 'Capgemini UK PLC', keys: ['capgemini uk plc', 'capgemini'] }
   ];
 
-  function inferPartnerFromDomain(domain) {
+  const customDomainPartnerMap = {};
+  let autoDomainPartnerMap = {};
+  let domainMappingReport = { autoMapped: [], ambiguous: [], unmapped: [] };
+
+  function isNonPartnerGroup(name) {
+    const n = cleanText(name).toLowerCase();
+    return !n || /direct\s*\/?\s*no partner|indirect\s*\/?\s*no partner|end customer\s*\/?\s*no partner|^direct$|^indirect$|^no partner named$/.test(n);
+  }
+
+  function isChannelPartnerOpportunity(opp) {
+    const partner = normalizePartnerLabel(opp.partnerName);
+    if (!partner) return false;
+    const route = saleRouteKind(opp.directIndirect);
+    if (route === 'direct') return false;
+    if (route === 'indirect') return true;
+    const account = normalizePartnerLabel(opp.accountName);
+    return Boolean(account && partner !== account);
+  }
+
+  function partnerCatalogFromOpportunities(opportunities) {
+    const names = new Set();
+    for (const opp of opportunities) {
+      if (!isChannelPartnerOpportunity(opp)) continue;
+      const label = normalizePartnerLabel(opp.partnerGroup || opp.partnerName);
+      if (!label || isNonPartnerGroup(label)) continue;
+      names.add(label);
+    }
+    return Array.from(names);
+  }
+
+  function significantPartnerTokens(partnerName) {
+    return keyify(partnerName).split(' ').filter((token) => token.length >= 2 && !PARTNER_NAME_STOP_WORDS.has(token));
+  }
+
+  function domainStems(domain) {
+    const parts = cleanText(domain).toLowerCase().split('.').filter((p) => p.length >= 2);
+    const stems = new Set();
+    if (parts[0]) stems.add(parts[0]);
+    if (parts.length > 2 && parts[1].length >= 3) stems.add(parts[1]);
+    return Array.from(stems);
+  }
+
+  function stemTokenScore(stem, partnerName) {
+    const tokens = keyify(partnerName).split(' ').filter((t) => t.length >= 2);
+    const sigTokens = significantPartnerTokens(partnerName);
+    let score = 0;
+
+    for (const token of tokens) {
+      if (stem === token) score = Math.max(score, 95);
+      else if (token.startsWith(stem) && stem.length >= 4) score = Math.max(score, 75 + Math.min(stem.length, 12));
+      else if (stem.startsWith(token) && token.length >= 4) score = Math.max(score, 65 + Math.min(token.length, 10));
+    }
+
+    for (const token of sigTokens) {
+      if (stem === token) score = Math.max(score, 90);
+      else if (token.startsWith(stem) && stem.length >= 4) score = Math.max(score, 70 + Math.min(stem.length, 10));
+      else if (stem.startsWith(token) && token.length >= 4) score = Math.max(score, 60 + Math.min(token.length, 8));
+      else if (token.length >= 5 && stem.includes(token)) score = Math.max(score, 58 + Math.min(token.length, 10));
+    }
+
+    return score;
+  }
+
+  function scoreDomainToPartner(domain, partnerName) {
+    const stems = domainStems(domain);
+    if (!stems.length || !partnerName) return 0;
+    return Math.max(...stems.map((stem) => stemTokenScore(stem, partnerName)));
+  }
+
+  function buildAutoDomainPartnerMap(opportunities, learningRows) {
+    const partners = partnerCatalogFromOpportunities(opportunities);
+    const domainStats = new Map();
+
+    for (const row of learningRows) {
+      const domain = cleanText(row.emailDomain).toLowerCase();
+      if (!domain || INTERNAL_LEARNING_DOMAINS.has(domain)) continue;
+      if (!domainStats.has(domain)) domainStats.set(domain, { learners: new Set(), learningSeconds: 0 });
+      const stat = domainStats.get(domain);
+      stat.learners.add(row.email);
+      stat.learningSeconds += row.learningSeconds || 0;
+    }
+
+    const autoMapped = [];
+    const ambiguous = [];
+    const unmapped = [];
+    const map = {};
+
+    for (const [domain, stat] of domainStats.entries()) {
+      const ranked = partners
+        .map((partner) => ({ partner, score: scoreDomainToPartner(domain, partner) }))
+        .filter((entry) => entry.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      const entry = {
+        domain,
+        learners: stat.learners.size,
+        learningSeconds: stat.learningSeconds,
+        bestPartner: ranked[0] ? ranked[0].partner : '',
+        bestScore: ranked[0] ? ranked[0].score : 0,
+        runnerUp: ranked[1] ? `${ranked[1].partner} (${ranked[1].score})` : ''
+      };
+
+      if (!ranked.length) {
+        unmapped.push(entry);
+        continue;
+      }
+
+      const best = ranked[0];
+      const second = ranked[1];
+      const clearWinner = !second || (best.score >= 75 && best.score >= second.score + 15);
+
+      if (clearWinner && best.score >= 60) {
+        map[domain] = best.partner;
+        autoMapped.push({ ...entry, partner: best.partner, confidence: best.score >= 85 ? 'high' : 'medium' });
+      } else if (best.score >= 50) {
+        ambiguous.push({ ...entry, alternatives: ranked.slice(0, 3).map((r) => `${r.partner} (${r.score})`).join('; ') });
+        unmapped.push(entry);
+      } else {
+        unmapped.push(entry);
+      }
+    }
+
+    autoMapped.sort((a, b) => b.learningSeconds - a.learningSeconds);
+    ambiguous.sort((a, b) => b.learningSeconds - a.learningSeconds);
+    unmapped.sort((a, b) => b.learningSeconds - a.learningSeconds);
+
+    return { map, autoMapped, ambiguous, unmapped };
+  }
+
+  function resolvePartnerFromDomain(domain) {
     const key = cleanText(domain).toLowerCase();
-    return DOMAIN_PARTNER_MAP[key] || '';
+    if (!key || INTERNAL_LEARNING_DOMAINS.has(key)) return '';
+    if (customDomainPartnerMap[key]) return customDomainPartnerMap[key];
+    if (autoDomainPartnerMap[key]) return autoDomainPartnerMap[key];
+    return '';
+  }
+
+  function applyPartnerMappingRecord(record) {
+    const partner = cleanText(pick(record, ['Partner Name', 'Partner', 'SFDC Partner Name', 'Sold To/Business Partner']));
+    const domain = cleanText(pick(record, ['Email Domain', 'Domain', 'EMAIL_DOMAIN'])).toLowerCase();
+    if (!partner || !domain) return false;
+    customDomainPartnerMap[domain] = normalizePartnerLabel(partner);
+    return true;
+  }
+
+  function remapLearningToPartners(learningRows, opportunities) {
+    const catalog = partnerCatalogFromOpportunities(opportunities);
+    for (const row of learningRows) {
+      if (INTERNAL_LEARNING_DOMAINS.has(cleanText(row.emailDomain).toLowerCase())) {
+        row.partnerGroup = 'Internal / Genesys or Seismic';
+        row.partnerKey = partnerJoinKey(row.partnerGroup);
+        row.mappedPartner = row.partnerGroup;
+        row.mappingSource = 'internal-domain';
+        continue;
+      }
+
+      const explicit = normalizePartnerLabel(row.mappedPartner || '');
+      if (explicit && catalog.includes(explicit)) {
+        row.partnerGroup = explicit;
+        row.partnerKey = partnerJoinKey(explicit);
+        row.mappingSource = row.mappingSource || 'learning-export';
+        continue;
+      }
+
+      const inferred = resolvePartnerFromDomain(row.emailDomain);
+      if (inferred) {
+        row.partnerGroup = inferred;
+        row.partnerKey = partnerJoinKey(inferred);
+        row.mappedPartner = inferred;
+        row.mappingSource = customDomainPartnerMap[row.emailDomain] ? 'manual-domain-map' : 'auto-domain-map';
+        continue;
+      }
+
+      row.partnerGroup = 'Unmapped learning partner';
+      row.partnerKey = partnerJoinKey(row.partnerGroup);
+      row.mappingSource = 'unmapped';
+    }
   }
   function normalizePartnerLabel(value) {
     const text = cleanText(value);
@@ -238,12 +408,30 @@
     }
     return '';
   }
-  function partnerGroup(partnerName, directIndirect) {
-    const partner = normalizePartnerLabel(partnerName);
+  function saleRouteKind(directIndirect) {
     const di = keyify(directIndirect);
-    if (partner) return partner;
-    if (di.includes('direct')) return 'Direct / No partner';
-    if (di.includes('indirect')) return 'Indirect / No partner named';
+    if (di.includes('indirect')) return 'indirect';
+    if (di.includes('direct')) return 'direct';
+    return '';
+  }
+
+  function partnerGroup(partnerName, directIndirect, accountName) {
+    const partner = normalizePartnerLabel(partnerName);
+    const route = saleRouteKind(directIndirect);
+    const account = normalizePartnerLabel(accountName);
+
+    if (route === 'direct') return 'Direct / No partner';
+
+    if (route === 'indirect') {
+      if (partner) return partner;
+      return 'Indirect / No partner named';
+    }
+
+    if (partner) {
+      if (account && partner === account) return 'End customer / No partner';
+      return partner;
+    }
+
     return 'No partner named';
   }
   function outcomeFromStage(stage, probability) {
@@ -481,11 +669,15 @@
       if (keys.includes('email') && keys.includes('timespent') && (keys.includes('lessontitle') || keys.includes('lesson title'))) {
         return { type: 'learning', headerRowIndex: i };
       }
+      if ((keys.includes('email domain') || keys.includes('domain')) && (keys.includes('partner name') || keys.includes('partner'))) {
+        return { type: 'partnerMap', headerRowIndex: i };
+      }
     }
     const name = `${fileName} ${sheetName}`.toLowerCase();
     if (name.includes('tasks')) return { type: 'tasks', headerRowIndex: 0 };
     if (name.includes('opportunit')) return { type: 'opportunities', headerRowIndex: 0 };
     if (name.includes('learning') || name.includes('seismic') || name.includes('lesson')) return { type: 'learning', headerRowIndex: 0 };
+    if (name.includes('partner') && name.includes('map')) return { type: 'partnerMap', headerRowIndex: 0 };
     return null;
   }
 
@@ -653,11 +845,13 @@
     const closeDate = parseDateValue(pick(record, ['Close Date', 'CloseDate']));
     const createdDate = parseDateValue(pick(record, ['Created Date', 'CreatedDate']));
     const stage = cleanText(pick(record, ['Stage', 'Stage Name']));
+    const accountName = cleanText(pick(record, ['Account Name', 'Company / Account', 'Account']));
+    const groupedPartner = partnerGroup(partnerName, directIndirect, accountName);
     return {
       sourceFile: extract.fileName,
       opportunityKey: normaliseOpportunityKey(opportunityName),
       opportunityName,
-      accountName: cleanText(pick(record, ['Account Name', 'Company / Account', 'Account'])),
+      accountName,
       ownerRole: cleanText(pick(record, ['Owner Role', 'Opp Owner Role'])),
       opportunityOwner: cleanText(pick(record, ['Opportunity Owner', 'Owner', 'Opp Owner'])),
       stage,
@@ -671,8 +865,8 @@
       nextStep: cleanText(pick(record, ['Next Step'])),
       directIndirect,
       partnerName,
-      partnerGroup: partnerGroup(partnerName, directIndirect),
-      partnerKey: partnerJoinKey(partnerGroup(partnerName, directIndirect)),
+      partnerGroup: groupedPartner,
+      partnerKey: partnerJoinKey(groupedPartner),
       region: cleanText(pick(record, ['Region', 'Sales Region', 'Geo', 'Area'])),
       subRegion: cleanText(pick(record, ['Sub-Region', 'Sub Region', 'Subregion', 'Territory'])),
       probability,
@@ -687,8 +881,9 @@
     if (!email) return null;
     const courseTitle = cleanText(pick(record, ['LESSONTITLE', 'Lesson Title', 'Course', 'Course Title', 'Title']));
     const emailDomain = (cleanText(pick(record, ['EMAIL_DOMAIN', 'Email Domain'])) || (email.includes('@') ? email.split('@').pop() : '')).toLowerCase();
-    const mappedPartnerRaw = cleanText(pick(record, ['MAPPED_PARTNER', 'SFDC_PARTNER_NAME', 'Partner', 'Partner Name'])) || inferPartnerFromDomain(emailDomain);
-    const partnerGroupName = normalizePartnerLabel(mappedPartnerRaw) || 'Unmapped learning partner';
+    const explicitPartner = cleanText(pick(record, ['MAPPED_PARTNER', 'SFDC_PARTNER_NAME', 'Partner', 'Partner Name']));
+    const mappedPartnerRaw = explicitPartner;
+    const partnerGroupName = explicitPartner ? normalizePartnerLabel(explicitPartner) : 'Unmapped learning partner';
     const partnerKey = partnerJoinKey(partnerGroupName) || canonicalKey(partnerGroupName);
     const seconds = Math.max(0, toNumber(pick(record, ['TIMESPENT_SECONDS', 'TIMESPENT', 'Time Spent Seconds', 'Time Spent'])) || 0);
     const engagedFlag = seconds > 0 || parseBoolean(pick(record, ['ENGAGED_FLAG'])) === true;
@@ -813,15 +1008,19 @@
   }
 
   function buildDataModel(parsedFiles) {
+    Object.keys(customDomainPartnerMap).forEach((key) => { delete customDomainPartnerMap[key]; });
+    autoDomainPartnerMap = {};
+    domainMappingReport = { autoMapped: [], ambiguous: [], unmapped: [] };
     const rawTasks = [];
     const rawOpps = [];
     const rawLearning = [];
     const mapped = [];
     const files = [];
+    let mappingRows = 0;
     let tasksBeforeDedup = 0;
     let learningBeforeDedup = 0;
     for (const file of parsedFiles) {
-      let taskRows = 0, oppRows = 0, mappedRows = 0, learningRows = 0;
+      let taskRows = 0, oppRows = 0, mappedRows = 0, learningRows = 0, partnerMapRows = 0;
       for (const extract of file.extracted) {
         extract.fileName = file.fileName;
         if (extract.type === 'tasks') {
@@ -848,9 +1047,14 @@
             const row = normalizeLearning(rec, extract);
             if (row) rawLearning.push(row);
           }
+        } else if (extract.type === 'partnerMap') {
+          partnerMapRows += extract.records.length;
+          for (const rec of extract.records) {
+            if (applyPartnerMappingRecord(rec)) mappingRows += 1;
+          }
         }
       }
-      files.push({ fileName: file.fileName, sheetsParsed: file.sheetsParsed, taskRows, oppRows, mappedRows, learningRows });
+      files.push({ fileName: file.fileName, sheetsParsed: file.sheetsParsed, taskRows, oppRows, mappedRows, learningRows, partnerMapRows });
     }
     tasksBeforeDedup = rawTasks.length;
     learningBeforeDedup = rawLearning.length;
@@ -859,6 +1063,14 @@
     const oppMap = new Map();
     for (const row of rawOpps.concat(mapped)) oppMap.set(row.opportunityKey, mergeOpportunity(oppMap.get(row.opportunityKey), row));
     const opportunities = Array.from(oppMap.values());
+    const autoResult = buildAutoDomainPartnerMap(opportunities, dedupedLearning);
+    autoDomainPartnerMap = { ...autoResult.map };
+    domainMappingReport = {
+      autoMapped: autoResult.autoMapped,
+      ambiguous: autoResult.ambiguous,
+      unmapped: autoResult.unmapped
+    };
+    remapLearningToPartners(dedupedLearning, opportunities);
     const hasRawTasks = dedupedTasks.length > 0;
     const taskAgg = hasRawTasks ? aggregateTasks(dedupedTasks) : aggregateSeed(opportunities);
     const oppKeys = new Set(opportunities.map((o) => o.opportunityKey));
@@ -883,6 +1095,7 @@
       hasRawTasks,
       unmatchedTaskAgg,
       unmatchedLearningPartners,
+      domainMappingReport,
       baseStats: {
         filesLoaded: parsedFiles.length,
         tasksImported: dedupedTasks.length,
@@ -892,7 +1105,9 @@
         learningImported: dedupedLearning.length,
         learningBeforeDedup,
         duplicateLearningRemoved: learningBeforeDedup - dedupedLearning.length,
-        learningLearnersImported: new Set(dedupedLearning.map((row) => row.email)).size
+        learningLearnersImported: new Set(dedupedLearning.map((row) => row.email)).size,
+        partnerMappingsImported: mappingRows,
+        autoDomainMappings: Object.keys(autoDomainPartnerMap).length
       }
     };
   }
@@ -1550,4 +1765,4 @@
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.PartnerDashboard = api;
-}(typeof globalThis !== 'undefined' ? globalThis : window);
+}(typeof globalThis !== 'undefined' ? globalThis : window));
