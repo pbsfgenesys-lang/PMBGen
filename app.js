@@ -207,13 +207,36 @@
   }
 
   function getL3Options() {
-    return [...new Set((PD.state.model.opportunities || []).map((o) => o.region).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const fromModel = (PD.state.model.opportunities || []).map((o) => PD.cleanText(o.region)).filter(Boolean);
+    const fromEngine = (PD.filterOptions && PD.filterOptions().region) || [];
+    return [...new Set(fromModel.concat(fromEngine))].sort((a, b) => a.localeCompare(b));
   }
 
   function getL4Options(l3) {
     let opps = PD.state.model.opportunities || [];
-    if (l3 && l3 !== 'all') opps = opps.filter((o) => o.region === l3);
-    return [...new Set(opps.map((o) => o.subRegion).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    if (l3 && l3 !== 'all') opps = opps.filter((o) => PD.cleanText(o.region) === l3);
+    const fromModel = opps.map((o) => PD.cleanText(o.subRegion)).filter(Boolean);
+    const fromEngine = (PD.filterOptions && PD.filterOptions().subRegion) || [];
+    const engineFiltered = l3 && l3 !== 'all'
+      ? fromEngine.filter((sub) => opps.some((o) => PD.cleanText(o.subRegion) === sub))
+      : fromEngine;
+    return [...new Set(fromModel.concat(engineFiltered))].sort((a, b) => a.localeCompare(b));
+  }
+
+  function fillSelect(el, labelAll, values, current) {
+    if (!el) return;
+    el.replaceChildren();
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = labelAll;
+    el.appendChild(allOpt);
+    for (const value of values) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      el.appendChild(opt);
+    }
+    el.value = current && values.includes(current) ? current : 'all';
   }
 
   function syncRegionFilters(fromScorecard) {
@@ -234,29 +257,16 @@
 
   function populateRegionFilters() {
     if (!hasData()) return;
-    const l3Current = $('#filter-l3').value || 'all';
+    const l3Current = $('#filter-l3')?.value || 'all';
     const l3Options = getL3Options();
-    const l3Html = ['<option value="all">All regions</option>'].concat(l3Options.map((v) => `<option value="${PD.escapeHtml(v)}">${PD.escapeHtml(v)}</option>`)).join('');
-    $('#filter-l3').innerHTML = l3Html;
-    $('#filter-l3-scorecard').innerHTML = l3Html;
-    if (l3Current !== 'all' && l3Options.includes(l3Current)) {
-      $('#filter-l3').value = l3Current;
-      $('#filter-l3-scorecard').value = l3Current;
-    }
+    fillSelect($('#filter-l3'), 'All regions', l3Options, l3Current);
+    fillSelect($('#filter-l3-scorecard'), 'All regions', l3Options, l3Current);
 
-    const l3 = $('#filter-l3').value;
-    const l4Current = $('#filter-l4').value || 'all';
+    const l3 = $('#filter-l3')?.value || 'all';
+    const l4Current = $('#filter-l4')?.value || 'all';
     const l4Options = getL4Options(l3);
-    const l4Html = ['<option value="all">All sub-regions</option>'].concat(l4Options.map((v) => `<option value="${PD.escapeHtml(v)}">${PD.escapeHtml(v)}</option>`)).join('');
-    $('#filter-l4').innerHTML = l4Html;
-    $('#filter-l4-scorecard').innerHTML = l4Html;
-    if (l4Current !== 'all' && l4Options.includes(l4Current)) {
-      $('#filter-l4').value = l4Current;
-      $('#filter-l4-scorecard').value = l4Current;
-    } else {
-      $('#filter-l4').value = 'all';
-      $('#filter-l4-scorecard').value = 'all';
-    }
+    fillSelect($('#filter-l4'), 'All sub-regions', l4Options, l4Current);
+    fillSelect($('#filter-l4-scorecard'), 'All sub-regions', l4Options, l4Current);
     syncRegionFilters(false);
   }
 
@@ -460,7 +470,7 @@
           <td>${PD.formatHours(a.totalHours)}</td>
           <td>${PD.formatInt(a.taskCount)}</td>
         </tr>`).join('')
-      : '<tr><td colspan="3" class="muted">No task rows linked to this partner's opportunities.</td></tr>';
+      : `<tr><td colspan="3" class="muted">No task rows linked to this partner's opportunities.</td></tr>`;
 
     $('#detail-panels').innerHTML = `
       <article class="panel ${ui.detailSub === 'pipeline' ? '' : 'hidden'}" data-sub-panel="pipeline">
@@ -552,25 +562,14 @@
   }
 
   function onRegionChange(fromScorecard) {
-    if (!fromScorecard) {
-      const l3 = $('#filter-l3').value;
-      const l4Options = getL4Options(l3);
-      const l4Html = ['<option value="all">All sub-regions</option>'].concat(l4Options.map((v) => `<option value="${PD.escapeHtml(v)}">${PD.escapeHtml(v)}</option>`)).join('');
-      $('#filter-l4').innerHTML = l4Html;
-      $('#filter-l4-scorecard').innerHTML = l4Html;
-      $('#filter-l4').value = 'all';
-      $('#filter-l4-scorecard').value = 'all';
-      $('#filter-l3-scorecard').value = l3;
-    } else {
-      const l3 = $('#filter-l3-scorecard').value;
-      const l4Options = getL4Options(l3);
-      const l4Html = ['<option value="all">All sub-regions</option>'].concat(l4Options.map((v) => `<option value="${PD.escapeHtml(v)}">${PD.escapeHtml(v)}</option>`)).join('');
-      $('#filter-l4-scorecard').innerHTML = l4Html;
-      $('#filter-l4').innerHTML = l4Html;
-      $('#filter-l4-scorecard').value = 'all';
-      $('#filter-l4').value = 'all';
-      $('#filter-l3').value = l3;
-    }
+    const l3El = fromScorecard ? $('#filter-l3-scorecard') : $('#filter-l3');
+    const l3 = l3El?.value || 'all';
+    const l4Options = getL4Options(l3);
+    const l4Current = 'all';
+    fillSelect($('#filter-l4'), 'All sub-regions', l4Options, l4Current);
+    fillSelect($('#filter-l4-scorecard'), 'All sub-regions', l4Options, l4Current);
+    if (fromScorecard) $('#filter-l3').value = l3;
+    else $('#filter-l3-scorecard').value = l3;
     syncRegionFilters(fromScorecard);
     renderAll();
   }

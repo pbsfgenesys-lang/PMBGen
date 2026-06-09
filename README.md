@@ -27,6 +27,19 @@ No backend; data never leaves the user's browser.
 - `styles.css` — layout and charts
 - `app.js` — views, filters, and charts
 - `data-engine.js` — parse/join logic (Salesforce exports)
+- `scripts/smoke-test.mjs` — headless parse/join check (requires Node)
+
+## Smoke test (Node)
+
+After loading exports into `~/Downloads` (or pass paths explicitly):
+
+```bash
+source ~/.nvm/nvm.sh   # if using nvm
+node scripts/smoke-test.mjs
+node scripts/smoke-test.mjs /path/to/tasks.xls /path/to/opps.xls
+```
+
+Checks `app.js` syntax, L3 region mapping, match rate, and an EMEA filter slice.
 
 ## Previous version
 
