@@ -867,8 +867,12 @@
       partnerName,
       partnerGroup: groupedPartner,
       partnerKey: partnerJoinKey(groupedPartner),
-      region: cleanText(pick(record, ['Region', 'Sales Region', 'Geo', 'Area'])),
-      subRegion: cleanText(pick(record, ['Sub-Region', 'Sub Region', 'Subregion', 'Territory'])),
+      region: cleanText(pick(record, ['L3 - Region', 'Region', 'Sales Region', 'Geo', 'Area'])),
+      subRegion: cleanText(pick(record, ['Subregion L4', 'Sub-Region', 'Sub Region', 'Subregion', 'Territory'])),
+      industrySector: cleanText(pick(record, ['Industry Sector', 'Industry'])),
+      industryVertical: cleanText(pick(record, ['Industry Vertical', 'Vertical'])),
+      partnerTier: cleanText(pick(record, ['Partner Tier', 'Tier'])),
+      solutionConsultant: cleanText(pick(record, ['Solution Consultant', 'SC'])),
       probability,
       age: toNumber(pick(record, ['Age'])),
       totalAmount,
@@ -1237,18 +1241,18 @@
     };
     list.forEach((p) => {
       p.signal = 'Monitor'; p.signalClass = 'signal-neutral'; p.riskScore = 0;
-      if (p.totalHours > 0 && p.winRate !== null && benchmarks.hours75 !== null && benchmarks.winMedian !== null && p.totalHours >= benchmarks.hours75 && p.winRate < benchmarks.winMedian && (p.learningSecondsPerLearner === null || (benchmarks.learningPerLearner50 !== null && p.learningSecondsPerLearner < benchmarks.learningPerLearner50))) {
-        p.signal = 'High SC demand, weak learning'; p.signalClass = 'signal-alert'; p.riskScore = 5;
-      } else if (p.totalHours > 0 && p.learningSeconds === 0 && p.opportunityCount > 0) {
-        p.signal = 'SC-heavy, no learning evidence'; p.signalClass = 'signal-watch'; p.riskScore = 4;
-      } else if (p.learningSecondsPerLearner !== null && benchmarks.learningPerLearner50 !== null && p.learningSecondsPerLearner >= benchmarks.learningPerLearner50 && p.winRate !== null && benchmarks.winMedian !== null && p.winRate >= benchmarks.winMedian) {
-        p.signal = 'Strong learning and conversion'; p.signalClass = 'signal-good'; p.riskScore = 1;
+      if (p.totalHours > 0 && p.winRate !== null && benchmarks.hours75 !== null && benchmarks.winMedian !== null && p.totalHours >= benchmarks.hours75 && p.winRate < benchmarks.winMedian) {
+        p.signal = 'High SC demand, weak win rate'; p.signalClass = 'signal-alert'; p.riskScore = 5;
+      } else if (p.opportunityCount >= 15 && p.winRate !== null && p.winRate < 0.2 && p.closedCount >= 5) {
+        p.signal = 'High volume, low conversion'; p.signalClass = 'signal-watch'; p.riskScore = 4;
       } else if (p.totalHours > 0 && p.openCount > 0 && benchmarks.hoursPerOpp75 !== null && p.avgHoursPerOppWithHours !== null && p.avgHoursPerOppWithHours >= benchmarks.hoursPerOpp75 && p.closedCount === 0) {
         p.signal = 'Heavy support on open deals'; p.signalClass = 'signal-watch'; p.riskScore = 3;
       } else if (p.wonCount > 0 && p.hoursPer100k !== null && benchmarks.hoursPer100k50 !== null && p.hoursPer100k <= benchmarks.hoursPer100k50) {
-        p.signal = 'Efficient conversion'; p.signalClass = 'signal-positive'; p.riskScore = 2;
+        p.signal = 'Efficient conversion'; p.signalClass = 'signal-positive'; p.riskScore = 1;
+      } else if (p.winRate !== null && benchmarks.winMedian !== null && p.winRate >= benchmarks.winMedian && p.closedCount >= 5) {
+        p.signal = 'Strong conversion'; p.signalClass = 'signal-good'; p.riskScore = 1;
       } else if (p.totalHours > 0 && p.winRate !== null && benchmarks.hours75 !== null && benchmarks.winMedian !== null && p.totalHours >= benchmarks.hours75 && p.winRate >= benchmarks.winMedian) {
-        p.signal = 'High effort, but converting'; p.signalClass = 'signal-positive'; p.riskScore = 2;
+        p.signal = 'Strategic — high effort & converting'; p.signalClass = 'signal-positive'; p.riskScore = 2;
       }
     });
     return list;
@@ -1761,7 +1765,8 @@
     sortRows,
     summarizeStages,
     summarizeLearners,
-    summarizeActivities
+    summarizeActivities,
+    filterOptions
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.PartnerDashboard = api;

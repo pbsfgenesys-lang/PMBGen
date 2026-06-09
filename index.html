@@ -12,15 +12,15 @@
   <header class="banner">
     <div class="banner-top">
       <div>
-        <p class="eyebrow">Solution Consulting · Partner enablement</p>
+        <p class="eyebrow">Solution Consulting · Partner effectiveness</p>
         <h1>Partner Performance Dashboard</h1>
-        <p>How self-sufficient are partner pre-sales teams — and where is Genesys SC time still going?</p>
+        <p>Where is Genesys SC time going, how much pipeline do partners carry, and who converts?</p>
       </div>
       <span id="status-pill" class="status-pill">No data loaded</span>
     </div>
     <nav class="tabs" aria-label="Main navigation">
       <button type="button" class="tab active" data-page="overview">Overview</button>
-      <button type="button" class="tab" data-page="partners">Partner scorecard</button>
+      <button type="button" class="tab" data-page="partners">Partners</button>
       <button type="button" class="tab" data-page="detail" disabled>Partner detail</button>
       <button type="button" class="tab admin-link" data-page="admin">Admin</button>
     </nav>
@@ -30,20 +30,26 @@
     <section id="page-empty" class="page active">
       <div class="empty-hero">
         <h2>Upload exports to begin</h2>
-        <p>Load your Salesforce task report, opportunity report, and Seismic learning CSV. All processing happens in your browser — nothing is uploaded to a server.</p>
+        <p>Load your Salesforce task report and opportunity report. All processing happens in your browser — nothing is uploaded to a server.</p>
         <button type="button" class="btn btn-primary" id="goto-admin">Go to Admin · load files</button>
       </div>
     </section>
 
     <section id="page-overview" class="page">
       <div class="toolbar">
+        <label>Region (L3)
+          <select id="filter-l3"><option value="all">All regions</option></select>
+        </label>
+        <label>Sub-region (L4)
+          <select id="filter-l4"><option value="all">All sub-regions</option></select>
+        </label>
         <label>Search
           <input type="search" id="global-search" placeholder="Partner, opportunity, owner">
         </label>
         <label>View
           <select id="view-mode">
             <option value="partners">Partners only</option>
-            <option value="all">Include Genesys-direct</option>
+            <option value="all">Include direct / no partner</option>
           </select>
         </label>
         <span class="note" id="overview-note"></span>
@@ -54,8 +60,59 @@
         <article class="panel">
           <div class="panel-head">
             <div>
-              <h2>Partner watchlist</h2>
-              <p>Ranked by independence risk — click a row for detail</p>
+              <h2>Partner effectiveness matrix</h2>
+              <p>Opportunity volume vs SC hours — bubble colour = win rate</p>
+            </div>
+          </div>
+          <div id="chart-effectiveness" class="chart-host"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Volume vs conversion</h2>
+              <p>Partners above median opp count and win rate</p>
+            </div>
+          </div>
+          <div class="axis-labels"><span>Low win rate</span><span>High win rate</span></div>
+          <div id="quadrants" class="quadrants"></div>
+          <div class="axis-labels"><span>Low volume</span><span>High volume</span></div>
+        </article>
+      </div>
+      <div class="grid-2" style="margin-top:16px">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Top partners by SC hours</h2>
+              <p>Filtered slice</p>
+            </div>
+          </div>
+          <div id="chart-partner-hours" class="chart-host"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Win rate leaders</h2>
+              <p>Minimum 5 closed opportunities</p>
+            </div>
+          </div>
+          <div id="chart-win-rate" class="chart-host"></div>
+        </article>
+      </div>
+      <article class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <div>
+            <h2 id="region-chart-title">SC hours by region</h2>
+            <p id="region-chart-sub">Aggregated from filtered opportunities</p>
+          </div>
+        </div>
+        <div id="chart-region-hours" class="chart-host"></div>
+      </article>
+      <div class="grid-2" style="margin-top:16px">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Focus list</h2>
+              <p>Partners flagged for review — click for detail</p>
             </div>
           </div>
           <div class="table-scroll">
@@ -66,7 +123,7 @@
                   <th>Band</th>
                   <th>Opps</th>
                   <th>SC hrs</th>
-                  <th>Learning</th>
+                  <th>Win rate</th>
                   <th>Signal</th>
                 </tr>
               </thead>
@@ -77,13 +134,11 @@
         <article class="panel">
           <div class="panel-head">
             <div>
-              <h2>Partner maturity</h2>
-              <p>Learning investment vs Genesys SC reliance (medians)</p>
+              <h2>Hours by outcome</h2>
+              <p>Where SC effort sits in the pipeline</p>
             </div>
           </div>
-          <div class="axis-labels"><span>Low SC hrs/opp</span><span>High SC hrs/opp</span></div>
-          <div id="quadrants" class="quadrants"></div>
-          <div class="axis-labels"><span>Low learning</span><span>High learning</span></div>
+          <div id="chart-outcome" class="chart-host"></div>
         </article>
       </div>
       <p id="direct-footnote" class="footnote hidden"></p>
@@ -91,19 +146,25 @@
 
     <section id="page-partners" class="page">
       <div class="toolbar">
+        <label>Region (L3)
+          <select id="filter-l3-scorecard"><option value="all">All regions</option></select>
+        </label>
+        <label>Sub-region (L4)
+          <select id="filter-l4-scorecard"><option value="all">All sub-regions</option></select>
+        </label>
         <label>Sort by
           <select id="partner-sort">
-            <option value="riskScore">Independence risk</option>
             <option value="totalHours">SC hours</option>
-            <option value="learningSeconds">Learning time</option>
+            <option value="opportunityCount">Opportunity count</option>
             <option value="winRate">Win rate</option>
+            <option value="riskScore">Review priority</option>
             <option value="avgHoursPerOpp">SC hrs / opp</option>
           </select>
         </label>
         <label>View
           <select id="view-mode-scorecard">
             <option value="partners">Partners only</option>
-            <option value="all">Include Genesys-direct</option>
+            <option value="all">Include direct / no partner</option>
           </select>
         </label>
         <button type="button" class="btn" id="export-partners">Export CSV</button>
@@ -112,7 +173,7 @@
         <div class="panel-head">
           <div>
             <h2>Partner scorecard</h2>
-            <p>Enablement, pipeline, and Genesys reliance in one view</p>
+            <p>SC effort, pipeline volume, and conversion in one view</p>
           </div>
         </div>
         <div class="table-scroll">
@@ -122,9 +183,12 @@
                 <th>Partner</th>
                 <th>Band</th>
                 <th>Opps</th>
+                <th>Opps w/ hrs</th>
                 <th>SC hrs</th>
                 <th>SC hrs/opp</th>
-                <th>Learning</th>
+                <th>Won</th>
+                <th>Lost</th>
+                <th>Open</th>
                 <th>Win rate</th>
                 <th>Signal</th>
               </tr>
@@ -140,7 +204,6 @@
       <div id="detail-hero" class="detail-hero"></div>
       <div class="subtabs" id="detail-subtabs">
         <button type="button" class="subtab active" data-sub="pipeline">Pipeline</button>
-        <button type="button" class="subtab" data-sub="learning">Learning</button>
         <button type="button" class="subtab" data-sub="sc">SC effort</button>
       </div>
       <div id="detail-panels"></div>
@@ -152,13 +215,13 @@
           <div class="panel-head">
             <div>
               <h2>Load data</h2>
-              <p>Salesforce tasks, opportunities, and Seismic learning CSV</p>
+              <p>Salesforce task report and opportunity report (tabular exports)</p>
             </div>
             <button type="button" class="btn btn-danger" id="clear-data">Clear all</button>
           </div>
           <div id="drop-zone" class="drop" tabindex="0" role="button">
             <p><strong>Drop files here</strong> or click to choose</p>
-            <p class="muted">Tasks · Opportunities · Learning CSV · optional partner-mapping CSV</p>
+            <p class="muted">Tasks · Opportunities · optional learning CSV (ignored in v2 views)</p>
           </div>
           <input id="file-input" type="file" accept=".xlsx,.xls,.csv" multiple hidden>
           <ul id="loaded-files" class="file-list"></ul>
@@ -184,33 +247,6 @@
               <tbody id="unmatched-body"></tbody>
             </table>
           </div>
-          <div class="panel-head" style="border-top: 1px solid var(--line);">
-            <div><h2>Email domain → partner mapping</h2><p>Inferred from learning emails and opportunity partner names (no hardcoded list)</p></div>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>Domain</th><th>Partner</th><th>Confidence</th><th>Learners</th><th>Learning time</th></tr></thead>
-              <tbody id="domain-mapping-body"></tbody>
-            </table>
-          </div>
-          <div class="panel-head" style="border-top: 1px solid var(--line);">
-            <div><h2>Ambiguous domains</h2><p>Multiple plausible partners — upload partner-mapping CSV to resolve</p></div>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>Domain</th><th>Best guess</th><th>Alternatives</th><th>Learners</th></tr></thead>
-              <tbody id="ambiguous-domain-body"></tbody>
-            </table>
-          </div>
-          <div class="panel-head" style="border-top: 1px solid var(--line);">
-            <div><h2>Unmatched learning partners</h2><p>Learning mapped to a partner name not in your opportunity export</p></div>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>Partner (from learning)</th><th>Learning time</th><th>Learners</th></tr></thead>
-              <tbody id="unmatched-learning-body"></tbody>
-            </table>
-          </div>
         </article>
       </div>
     </section>
@@ -222,8 +258,7 @@
       document.body.insertAdjacentHTML('afterbegin',
         '<div style="margin:16px;padding:16px;background:#fee4e2;border:1px solid #fca5a5;border-radius:8px;font:14px/1.4 system-ui,sans-serif;color:#7f1d1d;">' +
         '<strong>Dashboard failed to load.</strong> The file <code>data-engine.js</code> did not load. ' +
-        'Upload <code>index.html</code>, <code>app.js</code>, <code>data-engine.js</code>, and <code>styles.css</code> into the same folder, then open this page again. ' +
-        'Check the browser Network tab for 404 errors.</div>');
+        'Upload <code>index.html</code>, <code>app.js</code>, <code>data-engine.js</code>, and <code>styles.css</code> into the same folder, then open this page again.</div>');
     }
   </script>
   <script src="./app.js"></script>
