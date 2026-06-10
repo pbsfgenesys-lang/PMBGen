@@ -498,9 +498,18 @@
       <tr><td>Opportunities</td><td>${PD.formatInt(m.baseStats.opportunitiesImported || m.opportunities.length)}</td></tr>
       <tr><td>Tasks (deduped)</td><td>${PD.formatInt(m.tasks.length)}</td></tr>
       <tr><td>L3 regions in export</td><td>${PD.formatInt(regions)}</td></tr>
+      <tr><td>Fuzzy task–opp links</td><td>${PD.formatInt((m.fuzzyTaskMatches || []).length)}</td></tr>
       <tr><td>Task–opp match rate</td><td><strong>${matchRate !== null ? PD.formatPercent(matchRate) : '–'}</strong></td></tr>
       <tr><td>Unmatched task names</td><td>${PD.formatInt((m.unmatchedTaskAgg || []).length)}</td></tr>
     ` : '<tr><td colspan="2" class="muted">Load files to see diagnostics.</td></tr>';
+
+    const fuzzy = (m.fuzzyTaskMatches || []).slice(0, 15);
+    const fuzzyBody = $('#fuzzy-match-body');
+    if (fuzzyBody) {
+      fuzzyBody.innerHTML = fuzzy.length
+        ? fuzzy.map((r) => `<tr><td>${PD.escapeHtml(r.taskOpportunityName)}</td><td>${PD.escapeHtml(r.matchedOpportunityName)}</td><td>${PD.escapeHtml(r.matchedPartner || '')}</td><td>${PD.formatHours(r.totalHours)}</td></tr>`).join('')
+        : '<tr><td colspan="4" class="muted">No fuzzy links needed — all task names matched exactly.</td></tr>';
+    }
 
     const unmatched = (m.unmatchedTaskAgg || []).slice(0, 15);
     $('#unmatched-body').innerHTML = unmatched.length
@@ -610,6 +619,8 @@
       learningRows: [],
       hasRawTasks: false,
       unmatchedTaskAgg: [],
+      fuzzyTaskMatches: [],
+      taskKeyAliases: {},
       unmatchedLearningPartners: [],
       baseStats: {
         filesLoaded: 0,

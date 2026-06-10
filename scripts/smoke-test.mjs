@@ -90,6 +90,17 @@ async function main() {
   console.log(`  task–opp match: ${matchPct.toFixed(1)}%`);
   console.log(`  partners: ${d.partnerSummary.length.toLocaleString()}`);
 
+  const cgiUk = d.partnerSummary.find((p) => /cgi it uk/i.test(p.partnerGroup));
+  if (cgiUk) {
+    console.log(`\nCGI IT UK Limited: ${Math.round(cgiUk.totalHours)}h on ${cgiUk.opportunityCount} opps`);
+    if (cgiUk.totalHours < 500) fail(`Expected CGI IT UK HMRC hours >= 500, got ${cgiUk.totalHours}`);
+  }
+
+  const fuzzy = m.fuzzyTaskMatches || [];
+  const hmrcFuzzy = fuzzy.find((r) => /hmrc/i.test(r.taskOpportunityName) && /cgi/i.test(r.matchedPartner || ''));
+  if (!hmrcFuzzy) fail('Expected fuzzy link for HMRC/CGI task opportunity');
+  console.log(`Fuzzy HMRC/CGI link: ${Math.round(hmrcFuzzy.totalHours)}h`);
+
   PD.state.filters.selections.region = new Set(['EMEA']);
   const emea = PD.getDerivedData();
   console.log('\nEMEA filter');

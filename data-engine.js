@@ -33,6 +33,7 @@
     learningRows: [],
     hasRawTasks: false,
     unmatchedTaskAgg: [],
+    fuzzyTaskMatches: [],
     unmatchedLearningPartners: [],
     baseStats: {
       filesLoaded: 0,
@@ -450,6 +451,164 @@
   function normaliseOpportunityKey(value) {
     return cleanText(value).toLowerCase();
   }
+
+  const OPPORTUNITY_TOKEN_STOP = new Set([
+    'the', 'and', 'for', 'with', 'new', 'all', 'dev', 'phase', 'tender', 'ccaa', 'saas', 'opp', 'opportunity'
+  ]);
+
+  function opportunityTokens(name) {
+    return new Set(
+      cleanText(name).toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter((token) => token.length >= 3 && !OPPORTUNITY_TOKEN_STOP.has(token))
+    );
+  }
+
+  function scoreOpportunityMatch(taskName, oppName, oppPartner) {
+    const taskTokens = opportunityTokens(taskName);
+    const oppTokens = opportunityTokens(oppName);
+    if (!taskTokens.size || !oppTokens.size) return 0;
+    let shared = 0;
+    for (const token of taskTokens) {
+      if (oppTokens.has(token)) shared += 1;
+    }
+    if (shared < 2) return 0;
+    const union = new Set([...taskTokens, ...oppTokens]).size;
+    let score = shared / union;
+    const taskLower = cleanText(taskName).toLowerCase();
+    const partnerLower = cleanText(oppPartner).toLowerCase();
+    if (partnerLower) {
+      for (const part of partnerLower.split(/[^a-z0-9]+/)) {
+        if (part.length >= 3 && taskLower.includes(part)) score += 0.12;
+      }
+    }
+    const anchor = [...taskTokens][0];
+    if (anchor && oppTokens.has(anchor) && anchor.length >= 4) score += 0.08;
+    return score;
+  }
+
+  function buildOpportunityTokenIndex(opportunities) {
+    const index = new Map();
+    for (const opp of opportunities) {
+      const tokens = opportunityTokens(opp.opportunityName);
+      for (const token of tokens) {
+        if (!index.has(token)) index.set(token, []);
+        index.get(token).push(opp);
+      }
+    }
+    return index;
+  }
+
+  function findFuzzyOpportunityMatch(taskName, opportunities, tokenIndex) {
+    const taskTokens = opportunityTokens(taskName);
+    if (!taskTokens.size) return null;
+    const candidates = new Map();
+    for (const token of taskTokens) {
+      for (const opp of (tokenIndex?.get(token) || [])) {
+        candidates.set(opp.opportunityKey, opp);
+      }
+    }
+    const pool = candidates.size ? Array.from(candidates.values()) : opportunities;
+    let best = null;
+    let bestScore = 0;
+    for (const opp of pool) {
+      const score = scoreOpportunityMatch(taskName, opp.opportunityName, opp.partnerGroup || opp.partnerName);
+      if (score > bestScore) {
+        bestScore = score;
+        best = opp;
+      }
+    }
+    if (best && bestScore >= 0.35) return { opp: best, score: bestScore };
+    return null;
+  }
+
+  function mergeTaskAggRow(target, source) {
+    target.totalHours += source.totalHours || 0;
+    target.taskCount += source.taskCount || 0;
+    for (const name of source.consultants || []) target.consultants.add(name);
+    for (const [activity, hours] of (source.activityHours || new Map()).entries()) {
+      target.activityHours.set(activity, (target.activityHours.get(activity) || 0) + hours);
+    }
+    if (source.latestTaskDate && (!target.latestTaskDate || source.latestTaskDate > target.latestTaskDate)) {
+      target.latestTaskDate = source.latestTaskDate;
+    }
+    if (source.earliestTaskDate && (!target.earliestTaskDate || source.earliestTaskDate < target.earliestTaskDate)) {
+      target.earliestTaskDate = source.earliestTaskDate;
+    }
+  }
+
+  function reconcileTaskAggregation(taskAgg, opportunities) {
+    const oppKeys = new Set(opportunities.map((o) => o.opportunityKey));
+    const tokenIndex = buildOpportunityTokenIndex(opportunities);
+    const remapped = new Map();
+    const fuzzyMatches = [];
+    const taskKeyAliases = new Map();
+
+    function ensureRow(key, name) {
+      if (!remapped.has(key)) {
+        remapped.set(key, {
+          opportunityKey: key,
+          opportunityName: name,
+          totalHours: 0,
+          taskCount: 0,
+          consultants: new Set(),
+          activityHours: new Map(),
+          latestTaskDate: null,
+          earliestTaskDate: null
+        });
+      }
+      return remapped.get(key);
+    }
+
+    for (const agg of taskAgg.values()) {
+      if (oppKeys.has(agg.opportunityKey)) {
+        taskKeyAliases.set(agg.opportunityKey, agg.opportunityKey);
+        const row = ensureRow(agg.opportunityKey, agg.opportunityName);
+        mergeTaskAggRow(row, agg);
+        continue;
+      }
+      const match = findFuzzyOpportunityMatch(agg.opportunityName, opportunities, tokenIndex);
+      if (match) {
+        taskKeyAliases.set(agg.opportunityKey, match.opp.opportunityKey);
+        fuzzyMatches.push({
+          taskOpportunityName: agg.opportunityName,
+          matchedOpportunityName: match.opp.opportunityName,
+          matchedPartner: match.opp.partnerGroup,
+          totalHours: agg.totalHours,
+          taskCount: agg.taskCount,
+          score: match.score
+        });
+        const row = ensureRow(match.opp.opportunityKey, match.opp.opportunityName);
+        mergeTaskAggRow(row, agg);
+        continue;
+      }
+      taskKeyAliases.set(agg.opportunityKey, agg.opportunityKey);
+      const row = ensureRow(agg.opportunityKey, agg.opportunityName);
+      mergeTaskAggRow(row, agg);
+    }
+
+    for (const opp of opportunities) {
+      if (!remapped.has(opp.opportunityKey)) {
+        remapped.set(opp.opportunityKey, {
+          opportunityKey: opp.opportunityKey,
+          opportunityName: opp.opportunityName,
+          totalHours: 0,
+          taskCount: 0,
+          consultants: new Set(),
+          activityHours: new Map(),
+          latestTaskDate: null,
+          earliestTaskDate: null
+        });
+      } else {
+        remapped.get(opp.opportunityKey).opportunityName = opp.opportunityName;
+      }
+    }
+
+    fuzzyMatches.sort((a, b) => b.totalHours - a.totalHours);
+    return { taskAgg: remapped, fuzzyMatches, taskKeyAliases };
+  }
+
   function readText(bytes) {
     const list = ['utf-8', 'windows-1252'];
     for (const enc of list) {
@@ -1076,9 +1235,13 @@
     };
     remapLearningToPartners(dedupedLearning, opportunities);
     const hasRawTasks = dedupedTasks.length > 0;
-    const taskAgg = hasRawTasks ? aggregateTasks(dedupedTasks) : aggregateSeed(opportunities);
+    const rawTaskAgg = hasRawTasks ? aggregateTasks(dedupedTasks) : aggregateSeed(opportunities);
+    const reconciled = reconcileTaskAggregation(rawTaskAgg, opportunities);
+    const taskAgg = reconciled.taskAgg;
+    const fuzzyTaskMatches = reconciled.fuzzyMatches;
+    const taskKeyAliases = Object.fromEntries(reconciled.taskKeyAliases);
     const oppKeys = new Set(opportunities.map((o) => o.opportunityKey));
-    const unmatchedTaskAgg = Array.from(taskAgg.values()).filter((row) => !oppKeys.has(row.opportunityKey)).map((row) => ({
+    const unmatchedTaskAgg = Array.from(taskAgg.values()).filter((row) => !oppKeys.has(row.opportunityKey) && row.totalHours > 0).map((row) => ({
       opportunityName: row.opportunityName,
       totalHours: row.totalHours,
       taskCount: row.taskCount,
@@ -1098,6 +1261,8 @@
       learningRows: dedupedLearning,
       hasRawTasks,
       unmatchedTaskAgg,
+      fuzzyTaskMatches,
+      taskKeyAliases,
       unmatchedLearningPartners,
       domainMappingReport,
       baseStats: {
@@ -1342,10 +1507,17 @@
       return cleanText(av).localeCompare(cleanText(bv)) * dir;
     });
   }
+  function resolvedTaskOpportunityKey(task) {
+    const aliases = state.model.taskKeyAliases || {};
+    return aliases[task.opportunityKey] || task.opportunityKey;
+  }
+
   function getDerivedData() {
     const filteredTasks = state.model.hasRawTasks ? applyTaskFilters(state.model.tasks) : [];
     const filteredLearning = applyLearningFilters(state.model.learningRows || []);
-    const taskAgg = state.model.hasRawTasks ? aggregateTasks(filteredTasks) : aggregateSeed(state.model.opportunities);
+    const rawTaskAgg = state.model.hasRawTasks ? aggregateTasks(filteredTasks) : aggregateSeed(state.model.opportunities);
+    const reconciled = reconcileTaskAggregation(rawTaskAgg, state.model.opportunities);
+    const taskAgg = reconciled.taskAgg;
     const learningAgg = aggregateLearningByPartner(filteredLearning);
     let joined = joinOpps(state.model.opportunities, taskAgg, !state.model.hasRawTasks, learningAgg);
     if (taskFiltersActive()) joined = joined.filter((row) => row.totalHours > 0);
@@ -1353,7 +1525,7 @@
     joined = applyOppFilters(joined);
     const oppKeys = new Set(joined.map((row) => row.opportunityKey));
     const partnerKeys = new Set(joined.map((row) => row.partnerKey));
-    const tasksInScope = state.model.hasRawTasks ? filteredTasks.filter((task) => oppKeys.has(task.opportunityKey)) : [];
+    const tasksInScope = state.model.hasRawTasks ? filteredTasks.filter((task) => oppKeys.has(resolvedTaskOpportunityKey(task))) : [];
     const learningInScope = filteredLearning.filter((row) => partnerKeys.has(row.partnerKey));
     const learningAggInScope = aggregateLearningByPartner(learningInScope);
     const partnerSummary = summarizePartners(joined, learningAggInScope);
