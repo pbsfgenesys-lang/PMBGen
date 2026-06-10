@@ -511,10 +511,36 @@
         : '<tr><td colspan="4" class="muted">No fuzzy links needed — all task names matched exactly.</td></tr>';
     }
 
-    const unmatched = (m.unmatchedTaskAgg || []).slice(0, 15);
-    $('#unmatched-body').innerHTML = unmatched.length
-      ? unmatched.map((r) => `<tr><td>${PD.escapeHtml(r.opportunityName)}</td><td>${PD.formatHours(r.totalHours)}</td></tr>`).join('')
-      : '<tr><td colspan="2" class="muted">None</td></tr>';
+    const breakdown = hasData() && PD.getTaskJoinBreakdown ? PD.getTaskJoinBreakdown() : null;
+    const joinBody = $('#join-breakdown-body');
+    const joinNote = $('#join-breakdown-note');
+    if (breakdown && joinBody) {
+      const order = [
+        'matched_exact', 'matched_fuzzy', 'unmatched_internal', 'unmatched_sc_initiative',
+        'unmatched_marketing', 'unmatched_direct_named', 'unmatched_account_only',
+        'unmatched_pipeline_missing', 'unmatched_blank'
+      ];
+      joinBody.innerHTML = order.map((key) => {
+        const b = breakdown.buckets[key];
+        const share = breakdown.totalHours ? b.hours / breakdown.totalHours : 0;
+        const gapCls = key === 'unmatched_pipeline_missing' ? 'join-row-gap' : '';
+        return `<tr class="${gapCls}"><td>${PD.escapeHtml(b.label)}</td><td>${PD.formatHours(b.hours)}</td><td>${PD.formatPercent(share)}</td><td>${PD.formatInt(b.tasks)}</td></tr>`;
+      }).join('');
+      if (joinNote) {
+        const gapPct = breakdown.totalHours ? breakdown.partnerGapHours / breakdown.totalHours : 0;
+        joinNote.className = 'join-note gap';
+        joinNote.innerHTML = `<strong>Partner-relevant gap:</strong> ${PD.formatHours(breakdown.partnerGapHours)} (${PD.formatPercent(gapPct)}) — pipeline opportunity names on tasks with no matching row in your opp export. `
+          + `Matched total ${PD.formatHours(breakdown.matchedHours)}; expected non-pipeline unmatched ${PD.formatHours(breakdown.expectedUnmatched)} (internal, events, direct-named).`;
+      }
+    } else if (joinBody) {
+      joinBody.innerHTML = '<tr><td colspan="4" class="muted">Load files to see breakdown.</td></tr>';
+      if (joinNote) joinNote.textContent = '';
+    }
+
+    const pipelineMissing = breakdown?.pipelineMissingList || [];
+    $('#unmatched-body').innerHTML = pipelineMissing.length
+      ? pipelineMissing.map((r) => `<tr><td>${PD.escapeHtml(r.opportunityName)}</td><td>${PD.formatHours(r.totalHours)}</td></tr>`).join('')
+      : '<tr><td colspan="2" class="muted">None — all pipeline task names appear in opp export.</td></tr>';
 
     $('#loaded-files').innerHTML = (m.files || []).length
       ? m.files.map((f) => `<li><strong>${PD.escapeHtml(f.fileName)}</strong><br><span class="muted">${PD.formatInt(f.taskRows)} tasks · ${PD.formatInt(f.oppRows + (f.mappedRows || 0))} opps</span></li>`).join('')

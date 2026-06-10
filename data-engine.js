@@ -1923,6 +1923,95 @@
 
 
 
+  function classifyUnmatchedTaskName(name) {
+    const n = cleanText(name);
+    if (!n) return 'blank';
+    if (/genesys internal|genesys - employees|unassigned contacts|global biv|genesys - unassigned|genesyssc\s*\*?internal\*?/i.test(n)) return 'internal';
+    if (/^FY\d{2}_Q\d|_EVENT_|_MEET_|on_Tour|Learning_Expedition|PubSec SC Activities|Initiative_/i.test(n)) return 'sc_initiative';
+    if (/marketing|campaign|enablement|training workshop|roadshow|webinar/i.test(n)) return 'marketing';
+    if (/ - DIRECT - |\(Direct\)|LOW - DIRECT|HIGH - DIRECT/i.test(n)) return 'direct_named';
+    return 'pipeline_named';
+  }
+
+  function getTaskJoinBreakdown() {
+    const m = state.model;
+    if (!m.tasks?.length) return null;
+
+    const aliases = m.taskKeyAliases || {};
+    const fuzzyNames = new Set((m.fuzzyTaskMatches || []).map((r) => cleanText(r.taskOpportunityName).toLowerCase()));
+    const oppKeys = new Set(m.opportunities.map((o) => o.opportunityKey));
+    const accountNames = new Set(m.opportunities.map((o) => cleanText(o.accountName).toLowerCase()).filter(Boolean));
+    const oppNames = new Set(m.opportunities.map((o) => cleanText(o.opportunityName).toLowerCase()));
+
+    const buckets = {
+      matched_exact: { hours: 0, tasks: 0, label: 'Matched — exact opportunity name' },
+      matched_fuzzy: { hours: 0, tasks: 0, label: 'Matched — fuzzy link (renamed in Salesforce)' },
+      unmatched_internal: { hours: 0, tasks: 0, label: 'Unmatched — internal Genesys time' },
+      unmatched_sc_initiative: { hours: 0, tasks: 0, label: 'Unmatched — SC initiatives / FY events' },
+      unmatched_marketing: { hours: 0, tasks: 0, label: 'Unmatched — marketing / enablement' },
+      unmatched_direct_named: { hours: 0, tasks: 0, label: 'Unmatched — direct deal (named in task)' },
+      unmatched_account_only: { hours: 0, tasks: 0, label: 'Unmatched — account name, not opportunity' },
+      unmatched_pipeline_missing: { hours: 0, tasks: 0, label: 'Unmatched — pipeline opp not in export' },
+      unmatched_blank: { hours: 0, tasks: 0, label: 'Unmatched — blank opportunity name' }
+    };
+
+    for (const task of m.tasks) {
+      const hrs = task.hours || 0;
+      const name = cleanText(task.opportunityName);
+      const resolved = aliases[task.opportunityKey] || task.opportunityKey;
+
+      if (oppKeys.has(resolved)) {
+        if (fuzzyNames.has(name.toLowerCase())) {
+          buckets.matched_fuzzy.hours += hrs;
+          buckets.matched_fuzzy.tasks += 1;
+        } else {
+          buckets.matched_exact.hours += hrs;
+          buckets.matched_exact.tasks += 1;
+        }
+        continue;
+      }
+      if (!name) {
+        buckets.unmatched_blank.hours += hrs;
+        buckets.unmatched_blank.tasks += 1;
+        continue;
+      }
+
+      const cls = classifyUnmatchedTaskName(name);
+      let key = 'unmatched_pipeline_missing';
+      if (cls === 'internal') key = 'unmatched_internal';
+      else if (cls === 'sc_initiative') key = 'unmatched_sc_initiative';
+      else if (cls === 'marketing') key = 'unmatched_marketing';
+      else if (cls === 'direct_named') key = 'unmatched_direct_named';
+      else if (accountNames.has(name.toLowerCase()) && !oppNames.has(name.toLowerCase())) key = 'unmatched_account_only';
+
+      buckets[key].hours += hrs;
+      buckets[key].tasks += 1;
+    }
+
+    const totalHours = Object.values(buckets).reduce((sum, row) => sum + row.hours, 0);
+    const pipelineMissingList = (m.unmatchedTaskAgg || []).filter((row) => {
+      const cls = classifyUnmatchedTaskName(row.opportunityName);
+      if (cls !== 'pipeline_named') return false;
+      const n = cleanText(row.opportunityName).toLowerCase();
+      return !(accountNames.has(n) && !oppNames.has(n));
+    }).slice(0, 15);
+
+    const matchedHours = buckets.matched_exact.hours + buckets.matched_fuzzy.hours;
+    const expectedUnmatched = buckets.unmatched_internal.hours + buckets.unmatched_sc_initiative.hours
+      + buckets.unmatched_marketing.hours + buckets.unmatched_direct_named.hours;
+    const partnerGapHours = buckets.unmatched_pipeline_missing.hours + buckets.unmatched_account_only.hours;
+
+    return {
+      buckets,
+      totalHours,
+      matchedHours,
+      expectedUnmatched,
+      partnerGapHours,
+      pipelineMissingList
+    };
+  }
+
+
   const api = {
     parseSpreadsheetBuffer,
     buildDataModel,
@@ -1938,7 +2027,8 @@
     summarizeStages,
     summarizeLearners,
     summarizeActivities,
-    filterOptions
+    filterOptions,
+    getTaskJoinBreakdown
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.PartnerDashboard = api;
