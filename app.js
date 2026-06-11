@@ -16,6 +16,8 @@
     partnerSortKey: 'totalHours'
   };
 
+  let derivedCache = null;
+
   const $ = (sel) => document.querySelector(sel);
 
   function hasData() {
@@ -27,8 +29,25 @@
     return /direct\s*\/?\s*no partner|indirect\s*\/?\s*no partner|end customer\s*\/?\s*no partner|^direct$|^indirect$|^no partner named$|\(blank partner\)/.test(n);
   }
 
+  function derivedCacheKey() {
+    const s = PD.state.filters;
+    const parts = [s.search || '', ui.includeDirect ? '1' : '0'];
+    for (const key of ['region', 'subRegion', 'partnerName', 'partnerGroup', 'directIndirect', 'opportunityOwner', 'ownerRole', 'stage', 'outcome', 'oppType', 'fiscalPeriod', 'closeYear', 'accountName', 'assigned', 'activityType', 'taskYear']) {
+      parts.push([...(s.selections[key] || new Set())].sort().join('|'));
+    }
+    return parts.join('::');
+  }
+
+  function invalidateDerived() {
+    derivedCache = null;
+  }
+
   function derived() {
-    return PD.getDerivedData();
+    const key = derivedCacheKey();
+    if (derivedCache && derivedCache.key === key) return derivedCache.data;
+    const data = PD.getDerivedData();
+    derivedCache = { key, data };
+    return data;
   }
 
   function filterPartners(list) {
@@ -489,8 +508,8 @@
 
   function renderAdmin() {
     const m = PD.state.model;
-    const d = hasData() ? derived() : null;
-    const matchRate = d && d.taskHoursTotal ? (d.taskHoursMatched / d.taskHoursTotal) : null;
+    const breakdown = hasData() && PD.getTaskJoinBreakdown ? PD.getTaskJoinBreakdown() : null;
+    const matchRate = breakdown && breakdown.totalHours ? breakdown.matchedHours / breakdown.totalHours : null;
     const regions = hasData() ? getL3Options().length : 0;
 
     $('#quality-body').innerHTML = hasData() ? `
@@ -511,33 +530,33 @@
         : '<tr><td colspan="4" class="muted">No fuzzy links needed — all task names matched exactly.</td></tr>';
     }
 
-    const breakdown = hasData() && PD.getTaskJoinBreakdown ? PD.getTaskJoinBreakdown() : null;
+    const breakdownData = breakdown;
     const joinBody = $('#join-breakdown-body');
     const joinNote = $('#join-breakdown-note');
-    if (breakdown && joinBody) {
+    if (breakdownData && joinBody) {
       const order = [
         'matched_exact', 'matched_fuzzy', 'unmatched_internal', 'unmatched_sc_initiative',
         'unmatched_marketing', 'unmatched_direct_named', 'unmatched_account_only',
         'unmatched_pipeline_missing', 'unmatched_blank'
       ];
       joinBody.innerHTML = order.map((key) => {
-        const b = breakdown.buckets[key];
-        const share = breakdown.totalHours ? b.hours / breakdown.totalHours : 0;
+        const b = breakdownData.buckets[key];
+        const share = breakdownData.totalHours ? b.hours / breakdownData.totalHours : 0;
         const gapCls = key === 'unmatched_pipeline_missing' ? 'join-row-gap' : '';
         return `<tr class="${gapCls}"><td>${PD.escapeHtml(b.label)}</td><td>${PD.formatHours(b.hours)}</td><td>${PD.formatPercent(share)}</td><td>${PD.formatInt(b.tasks)}</td></tr>`;
       }).join('');
       if (joinNote) {
-        const gapPct = breakdown.totalHours ? breakdown.partnerGapHours / breakdown.totalHours : 0;
+        const gapPct = breakdownData.totalHours ? breakdownData.partnerGapHours / breakdownData.totalHours : 0;
         joinNote.className = 'join-note gap';
-        joinNote.innerHTML = `<strong>Partner-relevant gap:</strong> ${PD.formatHours(breakdown.partnerGapHours)} (${PD.formatPercent(gapPct)}) — pipeline opportunity names on tasks with no matching row in your opp export. `
-          + `Matched total ${PD.formatHours(breakdown.matchedHours)}; expected non-pipeline unmatched ${PD.formatHours(breakdown.expectedUnmatched)} (internal, events, direct-named).`;
+        joinNote.innerHTML = `<strong>Partner-relevant gap:</strong> ${PD.formatHours(breakdownData.partnerGapHours)} (${PD.formatPercent(gapPct)}) — pipeline opportunity names on tasks with no matching row in your opp export. `
+          + `Matched total ${PD.formatHours(breakdownData.matchedHours)}; expected non-pipeline unmatched ${PD.formatHours(breakdownData.expectedUnmatched)} (internal, events, direct-named).`;
       }
     } else if (joinBody) {
       joinBody.innerHTML = '<tr><td colspan="4" class="muted">Load files to see breakdown.</td></tr>';
       if (joinNote) joinNote.textContent = '';
     }
 
-    const pipelineMissing = breakdown?.pipelineMissingList || [];
+    const pipelineMissing = breakdownData?.pipelineMissingList || [];
     $('#unmatched-body').innerHTML = pipelineMissing.length
       ? pipelineMissing.map((r) => `<tr><td>${PD.escapeHtml(r.opportunityName)}</td><td>${PD.formatHours(r.totalHours)}</td></tr>`).join('')
       : '<tr><td colspan="2" class="muted">None — all pipeline task names appear in opp export.</td></tr>';
@@ -593,6 +612,7 @@
     ui.includeDirect = value === 'all';
     $('#view-mode').value = value;
     $('#view-mode-scorecard').value = value;
+    invalidateDerived();
     renderAll();
   }
 
@@ -606,8 +626,11 @@
     if (fromScorecard) $('#filter-l3').value = l3;
     else $('#filter-l3-scorecard').value = l3;
     syncRegionFilters(fromScorecard);
+    invalidateDerived();
     renderAll();
   }
+
+  let searchTimer = null;
 
   async function loadFiles(fileList) {
     const files = Array.from(fileList || []);
@@ -622,6 +645,7 @@
       }
       PD.state.__parsedFiles = (PD.state.__parsedFiles || []).concat(parsed);
       PD.state.model = PD.buildDataModel(PD.state.__parsedFiles);
+      invalidateDerived();
       if (!parsed.length) {
         window.alert('None of the uploaded files matched expected task or opportunity layouts.');
       } else {
@@ -664,6 +688,7 @@
     PD.state.filters.selections = Object.fromEntries(
       ['region', 'subRegion', 'partnerName', 'partnerGroup', 'directIndirect', 'opportunityOwner', 'ownerRole', 'stage', 'outcome', 'oppType', 'fiscalPeriod', 'closeYear', 'accountName', 'assigned', 'activityType', 'taskYear', 'learnerEmail', 'learningCourse', 'learningState'].map((k) => [k, new Set()])
     );
+    invalidateDerived();
     ui.selectedPartnerKey = null;
     ui.page = 'empty';
     $('#global-search').value = '';
@@ -729,13 +754,17 @@
 
     $('#global-search').addEventListener('input', (e) => {
       PD.state.filters.search = e.target.value || '';
-      renderAll();
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        invalidateDerived();
+        renderAll();
+      }, 300);
     });
 
-    $('#filter-l3').addEventListener('change', () => onRegionChange(false));
-    $('#filter-l4').addEventListener('change', () => { syncRegionFilters(false); renderAll(); });
-    $('#filter-l3-scorecard').addEventListener('change', () => onRegionChange(true));
-    $('#filter-l4-scorecard').addEventListener('change', () => { syncRegionFilters(true); renderAll(); });
+    $('#filter-l3').addEventListener('change', () => { invalidateDerived(); onRegionChange(false); });
+    $('#filter-l4').addEventListener('change', () => { syncRegionFilters(false); invalidateDerived(); renderAll(); });
+    $('#filter-l3-scorecard').addEventListener('change', () => { invalidateDerived(); onRegionChange(true); });
+    $('#filter-l4-scorecard').addEventListener('change', () => { syncRegionFilters(true); invalidateDerived(); renderAll(); });
 
     $('#view-mode').addEventListener('change', (e) => syncViewMode(e.target.value));
     $('#view-mode-scorecard').addEventListener('change', (e) => syncViewMode(e.target.value));

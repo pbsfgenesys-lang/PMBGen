@@ -609,6 +609,51 @@
     return { taskAgg: remapped, fuzzyMatches, taskKeyAliases };
   }
 
+  function remapTaskAggWithAliases(taskAgg, opportunities, aliases) {
+    const oppKeys = new Set(opportunities.map((o) => o.opportunityKey));
+    const remapped = new Map();
+
+    function ensureRow(key, name) {
+      if (!remapped.has(key)) {
+        remapped.set(key, {
+          opportunityKey: key,
+          opportunityName: name,
+          totalHours: 0,
+          taskCount: 0,
+          consultants: new Set(),
+          activityHours: new Map(),
+          latestTaskDate: null,
+          earliestTaskDate: null
+        });
+      }
+      return remapped.get(key);
+    }
+
+    for (const agg of taskAgg.values()) {
+      const aliasKey = aliases[agg.opportunityKey] || agg.opportunityKey;
+      const useKey = oppKeys.has(aliasKey) ? aliasKey : agg.opportunityKey;
+      const opp = opportunities.find((o) => o.opportunityKey === useKey);
+      const row = ensureRow(useKey, opp ? opp.opportunityName : agg.opportunityName);
+      mergeTaskAggRow(row, agg);
+    }
+
+    for (const opp of opportunities) {
+      if (!remapped.has(opp.opportunityKey)) {
+        remapped.set(opp.opportunityKey, {
+          opportunityKey: opp.opportunityKey,
+          opportunityName: opp.opportunityName,
+          totalHours: 0,
+          taskCount: 0,
+          consultants: new Set(),
+          activityHours: new Map(),
+          latestTaskDate: null,
+          earliestTaskDate: null
+        });
+      }
+    }
+    return remapped;
+  }
+
   function readText(bytes) {
     const list = ['utf-8', 'windows-1252'];
     for (const enc of list) {
@@ -1254,12 +1299,13 @@
       learningSeconds: row.learningSeconds,
       learnerCount: row.learnerCount
     })).sort((a, b) => b.learningSeconds - a.learningSeconds);
-    return {
+    const model = {
       files,
       tasks: dedupedTasks,
       opportunities,
       learningRows: dedupedLearning,
       hasRawTasks,
+      reconciledTaskAgg: taskAgg,
       unmatchedTaskAgg,
       fuzzyTaskMatches,
       taskKeyAliases,
@@ -1279,6 +1325,8 @@
         autoDomainMappings: Object.keys(autoDomainPartnerMap).length
       }
     };
+    model.taskJoinBreakdown = computeTaskJoinBreakdown(model);
+    return model;
   }
 
 
@@ -1515,9 +1563,15 @@
   function getDerivedData() {
     const filteredTasks = state.model.hasRawTasks ? applyTaskFilters(state.model.tasks) : [];
     const filteredLearning = applyLearningFilters(state.model.learningRows || []);
-    const rawTaskAgg = state.model.hasRawTasks ? aggregateTasks(filteredTasks) : aggregateSeed(state.model.opportunities);
-    const reconciled = reconcileTaskAggregation(rawTaskAgg, state.model.opportunities);
-    const taskAgg = reconciled.taskAgg;
+    let taskAgg;
+    if (state.model.hasRawTasks && !taskFiltersActive() && state.model.reconciledTaskAgg) {
+      taskAgg = state.model.reconciledTaskAgg;
+    } else if (state.model.hasRawTasks) {
+      const rawTaskAgg = aggregateTasks(filteredTasks);
+      taskAgg = remapTaskAggWithAliases(rawTaskAgg, state.model.opportunities, state.model.taskKeyAliases || {});
+    } else {
+      taskAgg = aggregateSeed(state.model.opportunities);
+    }
     const learningAgg = aggregateLearningByPartner(filteredLearning);
     let joined = joinOpps(state.model.opportunities, taskAgg, !state.model.hasRawTasks, learningAgg);
     if (taskFiltersActive()) joined = joined.filter((row) => row.totalHours > 0);
@@ -1543,6 +1597,7 @@
     const learningSeconds = learningInScope.reduce((sum, row) => sum + (row.learningSeconds || 0), 0);
     const engagedLearners = new Set(learningInScope.filter((row) => row.engagedFlag).map((row) => row.email)).size;
     const totalLearners = new Set(learningInScope.map((row) => row.email)).size;
+    const joinedOppKeys = new Set(joined.map((row) => row.opportunityKey));
     return {
       joined,
       tasksInScope,
@@ -1572,7 +1627,7 @@
       topOpportunity: sortRows(joined.filter((row) => row.totalHours > 0), { key: 'totalHours', dir: 'desc' })[0] || null,
       topLearner: sortRows(learnerSummary.filter((row) => row.learningSeconds > 0), { key: 'learningSeconds', dir: 'desc' })[0] || null,
       watchPartner: sortRows(partnerSummary.filter((row) => row.signalClass === 'signal-alert' || row.signalClass === 'signal-watch'), { key: 'riskScore', dir: 'desc' })[0] || null,
-      taskHoursMatched: Array.from(taskAgg.values()).filter((row) => joined.some((j) => j.opportunityKey === row.opportunityKey)).reduce((sum, row) => sum + row.totalHours, 0),
+      taskHoursMatched: Array.from(taskAgg.values()).filter((row) => joinedOppKeys.has(row.opportunityKey)).reduce((sum, row) => sum + row.totalHours, 0),
       taskHoursTotal: Array.from(taskAgg.values()).reduce((sum, row) => sum + row.totalHours, 0)
     };
   }
@@ -1933,9 +1988,8 @@
     return 'pipeline_named';
   }
 
-  function getTaskJoinBreakdown() {
-    const m = state.model;
-    if (!m.tasks?.length) return null;
+  function computeTaskJoinBreakdown(m) {
+    if (!m?.tasks?.length) return null;
 
     const aliases = m.taskKeyAliases || {};
     const fuzzyNames = new Set((m.fuzzyTaskMatches || []).map((r) => cleanText(r.taskOpportunityName).toLowerCase()));
@@ -2009,6 +2063,10 @@
       partnerGapHours,
       pipelineMissingList
     };
+  }
+
+  function getTaskJoinBreakdown() {
+    return state.model.taskJoinBreakdown || computeTaskJoinBreakdown(state.model);
   }
 
 
