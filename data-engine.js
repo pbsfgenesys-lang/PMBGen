@@ -203,7 +203,23 @@
     { label: 'Capgemini UK PLC', keys: ['capgemini uk plc', 'capgemini'] }
   ];
 
+  // Public domain hints only — not your full private mapping file.
+  const DOMAIN_PARTNER_HINTS = {
+    'sabiogroup.com': 'Sabio Ltd',
+    'sabio.co.uk': 'Sabio Ltd',
+    'bt.com': 'British Telecommunications PLC',
+    'bt.co.uk': 'British Telecommunications PLC',
+    'ipintegration.com': 'IP Integration Limited',
+    'accenture.com': 'Accenture UK Limited',
+    'capgemini.com': 'Capgemini UK PLC',
+    'kerv.com': 'Kerv Experience Limited',
+    'kervgroup.com': 'Kerv Experience Limited',
+    'maintel.co.uk': 'Maintel Europe Limited',
+    'weconnect.com': 'Connect Managed Services (UK) Limited'
+  };
+
   const customDomainPartnerMap = {};
+  let persistedDomainPartnerMap = {};
   let autoDomainPartnerMap = {};
   let domainMappingReport = { autoMapped: [], ambiguous: [], unmapped: [] };
 
@@ -336,8 +352,33 @@
     const key = cleanText(domain).toLowerCase();
     if (!key || INTERNAL_LEARNING_DOMAINS.has(key)) return '';
     if (customDomainPartnerMap[key]) return customDomainPartnerMap[key];
+    if (DOMAIN_PARTNER_HINTS[key]) return normalizePartnerLabel(DOMAIN_PARTNER_HINTS[key]);
     if (autoDomainPartnerMap[key]) return autoDomainPartnerMap[key];
     return '';
+  }
+
+  function applyPersistedDomainMaps() {
+    for (const [domain, partner] of Object.entries(persistedDomainPartnerMap)) {
+      customDomainPartnerMap[domain] = partner;
+    }
+  }
+
+  function setPersistedDomainMap(map) {
+    persistedDomainPartnerMap = {};
+    for (const [domain, partner] of Object.entries(map || {})) {
+      const d = cleanText(domain).toLowerCase();
+      const p = normalizePartnerLabel(partner);
+      if (d && p) persistedDomainPartnerMap[d] = p;
+    }
+    applyPersistedDomainMaps();
+  }
+
+  function getCustomDomainPartnerMap() {
+    return { ...customDomainPartnerMap };
+  }
+
+  function getDomainMappingReport() {
+    return state.model?.domainMappingReport || domainMappingReport;
   }
 
   function applyPartnerMappingRecord(record) {
@@ -372,7 +413,11 @@
         row.partnerGroup = inferred;
         row.partnerKey = partnerJoinKey(inferred);
         row.mappedPartner = inferred;
-        row.mappingSource = customDomainPartnerMap[row.emailDomain] ? 'manual-domain-map' : 'auto-domain-map';
+        const dk = cleanText(row.emailDomain).toLowerCase();
+        if (persistedDomainPartnerMap[dk]) row.mappingSource = 'saved-domain-map';
+        else if (customDomainPartnerMap[dk]) row.mappingSource = 'uploaded-domain-map';
+        else if (DOMAIN_PARTNER_HINTS[dk]) row.mappingSource = 'domain-hint';
+        else row.mappingSource = 'auto-domain-map';
         continue;
       }
 
@@ -1220,6 +1265,7 @@
   function buildDataModel(parsedFiles) {
     invalidateDerivedCache();
     Object.keys(customDomainPartnerMap).forEach((key) => { delete customDomainPartnerMap[key]; });
+    applyPersistedDomainMaps();
     autoDomainPartnerMap = {};
     domainMappingReport = { autoMapped: [], ambiguous: [], unmapped: [] };
     const rawTasks = [];
@@ -2142,7 +2188,10 @@
     summarizeLearners,
     summarizeActivities,
     filterOptions,
-    getTaskJoinBreakdown
+    getTaskJoinBreakdown,
+    getDomainMappingReport,
+    getCustomDomainPartnerMap,
+    setPersistedDomainMap
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.PartnerDashboard = api;

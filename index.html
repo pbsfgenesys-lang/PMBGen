@@ -107,6 +107,15 @@
         </div>
         <div id="chart-efficiency" class="chart-host"></div>
       </article>
+      <article class="panel hidden" id="learning-overview-panel" style="margin-top:16px">
+        <div class="panel-head">
+          <div>
+            <h2>Partner learning activity</h2>
+            <p>Genie/Seismic time mapped to partners — compare with SC effort on the scorecard</p>
+          </div>
+        </div>
+        <div id="chart-learning-partners" class="chart-host"></div>
+      </article>
       <article class="panel" style="margin-top:16px">
         <div class="panel-head">
           <div>
@@ -132,9 +141,10 @@
                   <th>Band</th>
                   <th>Opps</th>
                   <th>SC hrs</th>
-                  <th>Win rate</th>
-                  <th>Hrs / won</th>
-                  <th>Signal</th>
+                <th>Win rate</th>
+                <th>Learning</th>
+                <th>Hrs / won</th>
+                <th>Signal</th>
                 </tr>
               </thead>
               <tbody id="watchlist-body"></tbody>
@@ -200,6 +210,8 @@
                 <th>SC hrs/opp</th>
                 <th>Hrs / won</th>
                 <th>Hrs / $100k won</th>
+                <th>Learning hrs</th>
+                <th>Learners</th>
                 <th>Won</th>
                 <th>Lost</th>
                 <th>Open</th>
@@ -219,6 +231,7 @@
       <div class="subtabs" id="detail-subtabs">
         <button type="button" class="subtab active" data-sub="pipeline">Pipeline</button>
         <button type="button" class="subtab" data-sub="sc">SC effort</button>
+        <button type="button" class="subtab" data-sub="learning">Learning</button>
       </div>
       <div id="detail-panels"></div>
     </section>
@@ -235,10 +248,19 @@
           </div>
           <div id="drop-zone" class="drop" tabindex="0" role="button">
             <p><strong>Drop files here</strong> or click to choose</p>
-            <p class="muted">Tasks · Opportunities · optional learning CSV (ignored in v2 views)</p>
+            <p class="muted">Tasks · Opportunities · Genie/Seismic learning CSV · optional domain→partner map CSV</p>
           </div>
           <input id="file-input" type="file" accept=".xlsx,.xls,.csv" multiple hidden>
           <ul id="loaded-files" class="file-list"></ul>
+          <div class="mapping-tools" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+            <p class="muted" style="margin:0 0 8px">Domain→partner mappings stay in your browser only — never uploaded to GitHub.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn" id="upload-domain-map">Load domain map CSV</button>
+              <button type="button" class="btn" id="download-domain-map">Download saved map</button>
+              <button type="button" class="btn" id="clear-domain-map">Clear saved map</button>
+            </div>
+            <input id="domain-map-input" type="file" accept=".csv,.xlsx,.xls" hidden>
+          </div>
         </article>
         <article class="panel">
           <div class="panel-head">
@@ -250,6 +272,16 @@
           <div class="table-scroll">
             <table>
               <tbody id="quality-body"></tbody>
+            </table>
+          </div>
+          <div class="panel-head" style="border-top: 1px solid var(--line);">
+            <div><h2>Learning &amp; domain mapping</h2><p>Genie/Seismic activity mapped to partners via email domain</p></div>
+          </div>
+          <p id="learning-map-note" class="join-note muted"></p>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Domain</th><th>Learners</th><th>Learning</th><th>Status</th><th>Suggested partner</th></tr></thead>
+              <tbody id="domain-map-body"></tbody>
             </table>
           </div>
           <div class="panel-head" style="border-top: 1px solid var(--line);">

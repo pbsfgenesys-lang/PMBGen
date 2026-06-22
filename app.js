@@ -20,7 +20,36 @@
 
   let derivedCache = null;
 
+  const DOMAIN_MAP_STORAGE_KEY = 'partner-dashboard-domain-map';
   const $ = (sel) => document.querySelector(sel);
+
+  function hasLearningData() {
+    return (PD.state?.model?.learningRows || []).length > 0;
+  }
+
+  function loadPersistedDomainMap() {
+    if (!PD.setPersistedDomainMap) return;
+    try {
+      const raw = localStorage.getItem(DOMAIN_MAP_STORAGE_KEY);
+      if (raw) PD.setPersistedDomainMap(JSON.parse(raw));
+    } catch (err) {
+      console.warn('Could not load saved domain map', err);
+    }
+  }
+
+  function savePersistedDomainMap() {
+    if (!PD.getCustomDomainPartnerMap) return;
+    try {
+      localStorage.setItem(DOMAIN_MAP_STORAGE_KEY, JSON.stringify(PD.getCustomDomainPartnerMap()));
+    } catch (err) {
+      console.warn('Could not save domain map', err);
+    }
+  }
+
+  function clearPersistedDomainMap() {
+    localStorage.removeItem(DOMAIN_MAP_STORAGE_KEY);
+    if (PD.setPersistedDomainMap) PD.setPersistedDomainMap({});
+  }
 
   function hasData() {
     return (PD.state?.model?.opportunities || []).length > 0;
@@ -343,6 +372,7 @@
       <article class="kpi"><p class="label">Closed win rate</p><p class="value">${d.kpis.winRate !== null ? PD.formatPercent(d.kpis.winRate) : '–'}</p><p class="sub">Won vs lost in filter</p></article>
       <article class="kpi"><p class="label">SC hours per won</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPerWon)}</p><p class="sub">Portfolio avg · filtered slice</p></article>
       <article class="kpi"><p class="label">SC hours per $100k won</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPer100k)}</p><p class="sub">Uses Gross ACV Booking</p></article>
+      ${hasLearningData() ? `<article class="kpi"><p class="label">Partner learning</p><p class="value">${PD.formatDuration(d.kpis.learningSeconds)}</p><p class="sub">${PD.formatInt(d.kpis.engagedLearners)} engaged learners in filter</p></article>` : ''}
       <article class="kpi"><p class="label">Active partners</p><p class="value">${PD.formatInt(partners.length)}</p><p class="sub">${PD.formatInt(withHours.length)} with SC hours</p></article>
     `;
     $('#overview-note').textContent = d.taskHoursTotal ? `${PD.formatPercent(d.taskHoursMatched / d.taskHoursTotal)} of task hours matched to opps` : '';
@@ -406,6 +436,25 @@
         if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
         $('#chart-outcome').innerHTML = outcomeSvg(d.outcomeSummary);
         renderQuadrants(partners, medians);
+      },
+      () => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        const panel = $('#learning-overview-panel');
+        const host = $('#chart-learning-partners');
+        if (!hasLearningData() || !panel || !host) return;
+        panel.classList.remove('hidden');
+        const items = PD.sortRows(
+          partners.filter((p) => p.learningSeconds > 0),
+          { key: 'learningSeconds', dir: 'desc' }
+        ).slice(0, 10).map((p) => ({
+          label: p.partnerGroup,
+          meta: `${PD.formatInt(p.engagedLearnerCount || p.learnerCount)} learners · ${PD.formatHours(p.totalHours)} SC`,
+          value: p.learningSeconds / 3600,
+          valueLabel: PD.formatDuration(p.learningSeconds)
+        }));
+        host.innerHTML = items.length
+          ? barSvg(items, 'Top partners by learning time')
+          : emptyChart('Learning rows loaded but none mapped to partners in this filter.');
       }
     ];
     let step = 0;
@@ -421,7 +470,7 @@
   function renderWatchlist(partners, medians) {
     const body = $('#watchlist-body');
     if (!partners.length) {
-      body.innerHTML = '<tr><td colspan="7" class="muted">No partners match the current filter.</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="muted">No partners match the current filter.</td></tr>';
       return;
     }
     body.innerHTML = partners.map((p) => {
@@ -432,6 +481,7 @@
         <td>${PD.formatInt(p.opportunityCount)}</td>
         <td>${PD.formatHours(p.totalHours)}</td>
         <td>${p.winRate !== null ? PD.formatPercent(p.winRate) : '–'}</td>
+        <td>${p.learningSeconds > 0 ? PD.formatDuration(p.learningSeconds) : '–'}</td>
         <td>${formatEfficiencyHours(p.hoursPerWon)}</td>
         <td class="signal">${PD.escapeHtml(p.signal)}</td>
       </tr>`;
@@ -474,6 +524,8 @@
       <td>${p.avgHoursPerOppWithHours !== null ? PD.formatHours(p.avgHoursPerOppWithHours) : '–'}</td>
       <td>${formatEfficiencyHours(p.hoursPerWon)}</td>
       <td>${formatEfficiencyHours(p.hoursPer100k)}</td>
+      <td>${p.learningSeconds > 0 ? PD.formatDuration(p.learningSeconds) : '–'}</td>
+      <td>${p.learnerCount > 0 ? PD.formatInt(p.learnerCount) : '–'}</td>
       <td>${PD.formatInt(p.wonCount)}</td>
       <td>${PD.formatInt(p.lostCount)}</td>
       <td>${PD.formatInt(p.openCount)}</td>
@@ -486,7 +538,7 @@
     const sorted = PD.sortRows(partners, partnerSortState());
     const body = $('#scorecard-body');
     if (!sorted.length) {
-      body.innerHTML = '<tr><td colspan="13" class="muted">No partners match the current filter.</td></tr>';
+      body.innerHTML = '<tr><td colspan="15" class="muted">No partners match the current filter.</td></tr>';
       return;
     }
     const chunkSize = 75;
@@ -528,8 +580,25 @@
 
     $('#detail-hero').innerHTML = `
       <h2>${PD.escapeHtml(partner.partnerGroup)} ${bandHtml(band)}</h2>
-      <p>${PD.formatHours(partner.totalHours)} across ${PD.formatInt(partner.opportunityCount)} opportunities (${partner.avgHoursPerOppWithHours !== null ? PD.formatHours(partner.avgHoursPerOppWithHours) : '–'} per opp with SC time, ${PD.formatInt(partner.oppsWithHours)} opps with hours). ${partner.winRate !== null ? `Win rate ${PD.formatPercent(partner.winRate)} (${PD.formatInt(partner.wonCount)} won / ${PD.formatInt(partner.closedCount)} closed).` : ''} SC efficiency: ${formatEfficiencyHours(partner.hoursPerWon)} per won · ${formatEfficiencyHours(partner.hoursPer100k)} per $100k won. ${PD.escapeHtml(partner.signal)}.</p>
+      <p>${PD.formatHours(partner.totalHours)} across ${PD.formatInt(partner.opportunityCount)} opportunities (${partner.avgHoursPerOppWithHours !== null ? PD.formatHours(partner.avgHoursPerOppWithHours) : '–'} per opp with SC time, ${PD.formatInt(partner.oppsWithHours)} opps with hours). ${partner.winRate !== null ? `Win rate ${PD.formatPercent(partner.winRate)} (${PD.formatInt(partner.wonCount)} won / ${PD.formatInt(partner.closedCount)} closed).` : ''} SC efficiency: ${formatEfficiencyHours(partner.hoursPerWon)} per won · ${formatEfficiencyHours(partner.hoursPer100k)} per $100k won.${partner.learningSeconds > 0 ? ` Learning: ${PD.formatDuration(partner.learningSeconds)} (${PD.formatInt(partner.learnerCount)} learners).` : ''} ${PD.escapeHtml(partner.signal)}.</p>
     `;
+
+    const learningRows = (PD.state.model.learningRows || []).filter((r) => r.partnerKey === key);
+    const courseMap = new Map();
+    for (const row of learningRows) {
+      const title = row.learningCourse || '(blank)';
+      if (!courseMap.has(title)) courseMap.set(title, { title, learningSeconds: 0, learners: new Set() });
+      const c = courseMap.get(title);
+      c.learningSeconds += row.learningSeconds || 0;
+      if (row.email) c.learners.add(row.email);
+    }
+    const courses = PD.sortRows(
+      Array.from(courseMap.values()).map((c) => ({ ...c, learnerCount: c.learners.size })),
+      { key: 'learningSeconds', dir: 'desc' }
+    );
+    const courseRows = courses.length
+      ? courses.slice(0, 20).map((c) => `<tr><td>${PD.escapeHtml(c.title)}</td><td>${PD.formatDuration(c.learningSeconds)}</td><td>${PD.formatInt(c.learnerCount)}</td></tr>`).join('')
+      : '<tr><td colspan="3" class="muted">No learning activity mapped to this partner.</td></tr>';
 
     const pipelineRows = opps.length
       ? opps.map((o) => `<tr>
@@ -571,6 +640,10 @@
           <div class="table-scroll"><table><thead><tr><th>Activity type</th><th>SC hours</th><th>Tasks</th></tr></thead><tbody>${activityRows}</tbody></table></div>
         </div>
       </article>
+      <article class="panel ${ui.detailSub === 'learning' ? '' : 'hidden'}" data-sub-panel="learning">
+        <div class="panel-head"><div><h2>Learning activity</h2><p>Genie/Seismic courses mapped via learner email domain</p></div></div>
+        <div class="table-scroll"><table><thead><tr><th>Course</th><th>Learning time</th><th>Learners</th></tr></thead><tbody>${courseRows}</tbody></table></div>
+      </article>
     `;
   }
 
@@ -588,7 +661,34 @@
       <tr><td>Fuzzy task–opp links</td><td>${PD.formatInt((m.fuzzyTaskMatches || []).length)}</td></tr>
       <tr><td>Task–opp match rate</td><td><strong>${matchRate !== null ? PD.formatPercent(matchRate) : '–'}</strong></td></tr>
       <tr><td>Unmatched task names</td><td>${PD.formatInt((m.unmatchedTaskAgg || []).length)}</td></tr>
+      <tr><td>Learning rows</td><td>${PD.formatInt(m.learningRows?.length || 0)}</td></tr>
+      <tr><td>Distinct learners</td><td>${PD.formatInt(m.baseStats.learningLearnersImported || 0)}</td></tr>
+      <tr><td>Saved domain mappings</td><td>${PD.formatInt(Object.keys(PD.getCustomDomainPartnerMap ? PD.getCustomDomainPartnerMap() : {}).length)}</td></tr>
     ` : '<tr><td colspan="2" class="muted">Load files to see diagnostics.</td></tr>';
+
+    const domainReport = PD.getDomainMappingReport ? PD.getDomainMappingReport() : null;
+    const domainBody = $('#domain-map-body');
+    const domainNote = $('#learning-map-note');
+    if (domainReport && domainBody) {
+      const rows = []
+        .concat((domainReport.unmapped || []).map((r) => ({ ...r, status: 'Unmapped' })))
+        .concat((domainReport.ambiguous || []).map((r) => ({ ...r, status: 'Ambiguous', partner: r.bestPartner })))
+        .sort((a, b) => b.learningSeconds - a.learningSeconds)
+        .slice(0, 20);
+      domainBody.innerHTML = rows.length
+        ? rows.map((r) => `<tr><td>${PD.escapeHtml(r.domain)}</td><td>${PD.formatInt(r.learners)}</td><td>${PD.formatDuration(r.learningSeconds)}</td><td>${PD.escapeHtml(r.status)}</td><td>${PD.escapeHtml(r.partner || r.bestPartner || '–')}${r.runnerUp ? `<span class="muted"> · ${PD.escapeHtml(r.runnerUp)}</span>` : ''}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="muted">Load a learning export to review domain mapping.</td></tr>';
+      if (domainNote) {
+        const auto = (domainReport.autoMapped || []).length;
+        const amb = (domainReport.ambiguous || []).length;
+        const unmapped = (domainReport.unmapped || []).length;
+        domainNote.innerHTML = hasLearningData()
+          ? `<strong>Domain mapping:</strong> ${PD.formatInt(auto)} auto-matched · ${PD.formatInt(amb)} ambiguous · ${PD.formatInt(unmapped)} unmapped. Upload <code>partner-domain-map.csv</code> (Email Domain, Partner Name) — stored in your browser only. Template: <a href="partner-domain-map.template.csv">partner-domain-map.template.csv</a>.`
+          : '';
+      }
+    } else if (domainBody) {
+      domainBody.innerHTML = '<tr><td colspan="5" class="muted">Load a learning export to review domain mapping.</td></tr>';
+    }
 
     const fuzzy = (m.fuzzyTaskMatches || []).slice(0, 15);
     const fuzzyBody = $('#fuzzy-match-body');
@@ -686,6 +786,8 @@
       renderInsight(d, watch);
       renderWatchlist(watch, medians);
       renderFootnote(d);
+      const learningPanel = $('#learning-overview-panel');
+      if (learningPanel && !hasLearningData()) learningPanel.classList.add('hidden');
       requestAnimationFrame(() => {
         if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
         renderCharts(d, partners, renderGen);
@@ -748,6 +850,7 @@
       PD.state.__parsedFiles = (PD.state.__parsedFiles || []).concat(parsed);
       await new Promise((resolve) => setTimeout(resolve, 0));
       PD.state.model = PD.buildDataModel(PD.state.__parsedFiles);
+      savePersistedDomainMap();
       invalidateDerived();
       ui.regionFiltersReady = false;
       if (!parsed.length) {
@@ -765,6 +868,7 @@
   }
 
   function clearData() {
+    clearPersistedDomainMap();
     PD.state.__parsedFiles = [];
     PD.state.model = {
       files: [],
@@ -815,6 +919,8 @@
       SCHoursPerOppWithHours: p.avgHoursPerOppWithHours,
       HoursPerWon: p.hoursPerWon,
       HoursPer100kWon: p.hoursPer100k,
+      LearningSeconds: p.learningSeconds,
+      Learners: p.learnerCount,
       WonValue: p.wonValue,
       Won: p.wonCount,
       Lost: p.lostCount,
@@ -905,6 +1011,67 @@
     }));
     drop.addEventListener('drop', (e) => loadFiles(e.dataTransfer.files));
 
+    async function loadDomainMapFile(fileList) {
+      const file = Array.from(fileList || [])[0];
+      if (!file) return;
+      try {
+        const parsed = await PD.parseSpreadsheetBuffer(await file.arrayBuffer(), file.name);
+        let count = 0;
+        for (const extract of (parsed.extracted || [])) {
+          if (extract.type !== 'partnerMap') continue;
+          for (const rec of extract.records) {
+            const partner = PD.cleanText(rec['Partner Name'] || rec['Partner'] || rec['SFDC Partner Name'] || rec['Sold To/Business Partner'] || '');
+            const domain = PD.cleanText(rec['Email Domain'] || rec['Domain'] || rec['EMAIL_DOMAIN'] || '').toLowerCase();
+            if (!partner || !domain) continue;
+            const current = PD.getCustomDomainPartnerMap();
+            current[domain] = partner;
+            if (PD.setPersistedDomainMap) PD.setPersistedDomainMap(current);
+            count += 1;
+          }
+        }
+        if (!count && parsed.recognized) {
+          window.alert('No domain→partner rows found. Use columns: Email Domain, Partner Name.');
+          return;
+        }
+        if (hasData()) {
+          PD.state.model = PD.buildDataModel(PD.state.__parsedFiles || []);
+          savePersistedDomainMap();
+          invalidateDerived();
+          scheduleRender();
+        } else {
+          savePersistedDomainMap();
+        }
+        window.alert(`Saved ${count} domain mapping${count === 1 ? '' : 's'} to this browser.`);
+      } catch (err) {
+        console.error(err);
+        window.alert(`Could not read domain map: ${err.message}`);
+      }
+    }
+
+    $('#upload-domain-map').addEventListener('click', () => $('#domain-map-input').click());
+    $('#domain-map-input').addEventListener('change', (e) => {
+      loadDomainMapFile(e.target.files);
+      e.target.value = '';
+    });
+    $('#download-domain-map').addEventListener('click', () => {
+      const map = PD.getCustomDomainPartnerMap ? PD.getCustomDomainPartnerMap() : {};
+      const rows = Object.entries(map).map(([domain, partner]) => ({ 'Email Domain': domain, 'Partner Name': partner }));
+      if (!rows.length) {
+        window.alert('No saved domain mappings yet.');
+        return;
+      }
+      downloadCsv('partner-domain-map.csv', rows);
+    });
+    $('#clear-domain-map').addEventListener('click', () => {
+      if (!window.confirm('Clear saved domain mappings from this browser?')) return;
+      clearPersistedDomainMap();
+      if (hasData()) {
+        PD.state.model = PD.buildDataModel(PD.state.__parsedFiles || []);
+        invalidateDerived();
+        scheduleRender();
+      }
+    });
+
     document.body.addEventListener('click', (e) => {
       const row = e.target.closest('[data-partner-key]');
       if (row)     openPartner(row.getAttribute('data-partner-key'));
@@ -919,6 +1086,7 @@
     });
   }
 
+  loadPersistedDomainMap();
   bindEvents();
   scheduleRender();
 })();
