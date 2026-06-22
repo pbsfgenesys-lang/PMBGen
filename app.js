@@ -13,7 +13,9 @@
     selectedPartnerKey: null,
     detailSub: 'pipeline',
     includeDirect: false,
-    partnerSortKey: 'totalHours'
+    partnerSortKey: 'totalHours',
+    regionFiltersReady: false,
+    renderGen: 0
   };
 
   let derivedCache = null;
@@ -40,6 +42,7 @@
 
   function invalidateDerived() {
     derivedCache = null;
+    if (PD.invalidateDerivedCache) PD.invalidateDerivedCache();
   }
 
   function derived() {
@@ -105,6 +108,12 @@
     return `<span class="band ${PD.escapeHtml(band.id)}">${PD.escapeHtml(band.label)}</span>`;
   }
 
+  function formatEfficiencyHours(value) {
+    if (value === null || value === undefined || !Number.isFinite(value)) return '–';
+    const n = Number(value);
+    return `${n.toLocaleString('en-GB', { minimumFractionDigits: Math.abs(n) >= 100 ? 0 : 1, maximumFractionDigits: Math.abs(n) >= 100 ? 0 : 1 })}h`;
+  }
+
   function outcomePill(outcome) {
     const cls = outcome === 'Won' ? 'won' : outcome === 'Lost' ? 'lost' : 'open';
     return `<span class="pill-outcome ${cls}">${PD.escapeHtml(outcome || 'Open')}</span>`;
@@ -139,7 +148,8 @@
   }
 
   function effectivenessBubbleSvg(partners) {
-    const rows = partners.filter((p) => p.opportunityCount > 0 && (p.totalHours > 0 || p.closedCount > 0));
+    const pool = partners.filter((p) => p.opportunityCount > 0 && (p.totalHours > 0 || p.closedCount > 0));
+    const rows = PD.sortRows(pool, { key: 'totalHours', dir: 'desc' }).slice(0, 40);
     if (!rows.length) return emptyChart('Upload task and opportunity exports to compare partners.');
     const width = 980;
     const height = 380;
@@ -158,7 +168,8 @@
     const points = rows.map((p) => `<circle cx="${x(p.opportunityCount)}" cy="${y(p.totalHours)}" r="${r(p.oppsWithHours)}" fill="${winRateColor(p.winRate)}" fill-opacity="0.72" stroke="#fff" stroke-width="1.5" class="scatter-point"></circle>`).join('');
     const labels = top.map((p) => `<text x="${x(p.opportunityCount) + 8}" y="${y(p.totalHours) - 6}" class="chart-meta">${PD.escapeHtml(p.partnerGroup.length > 22 ? `${p.partnerGroup.slice(0, 20)}…` : p.partnerGroup)}</text>`).join('');
     const legend = `<g transform="translate(${pad.left + plotW - 160} ${pad.top})"><text class="chart-meta">Win rate</text><circle cx="8" cy="22" r="6" fill="#0d7a55"/><text x="20" y="26" class="chart-meta">≥35%</text><circle cx="8" cy="42" r="6" fill="#2563eb"/><text x="20" y="46" class="chart-meta">22–35%</text><circle cx="8" cy="62" r="6" fill="#b45309"/><text x="20" y="66" class="chart-meta">15–22%</text><circle cx="8" cy="82" r="6" fill="#b42318"/><text x="20" y="86" class="chart-meta">&lt;15%</text></g>`;
-    return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Partner effectiveness matrix">${gridX}${gridY}<line x1="${pad.left}" y1="${pad.top + plotH}" x2="${pad.left + plotW}" y2="${pad.top + plotH}" class="scatter-axis"></line><line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top + plotH}" class="scatter-axis"></line>${points}${labels}${legend}<text x="${pad.left + plotW / 2}" y="${height - 6}" text-anchor="middle" class="axis-label">Opportunity count</text><text x="18" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(-90 18 ${pad.top + plotH / 2})">SC hours</text></svg>`;
+    const note = pool.length > rows.length ? `<text x="${pad.left}" y="16" class="chart-meta">Top ${rows.length} partners by SC hours (${pool.length} with data in filter)</text>` : '';
+    return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Partner effectiveness matrix">${note}${gridX}${gridY}<line x1="${pad.left}" y1="${pad.top + plotH}" x2="${pad.left + plotW}" y2="${pad.top + plotH}" class="scatter-axis"></line><line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top + plotH}" class="scatter-axis"></line>${points}${labels}${legend}<text x="${pad.left + plotW / 2}" y="${height - 6}" text-anchor="middle" class="axis-label">Opportunity count</text><text x="18" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(-90 18 ${pad.top + plotH / 2})">SC hours</text></svg>`;
   }
 
   function outcomeSvg(items) {
@@ -213,7 +224,8 @@
   }
 
   function partnerSortState() {
-    return { key: ui.partnerSortKey, dir: ui.partnerSortKey === 'partnerGroup' ? 'asc' : 'desc' };
+    const ascKeys = new Set(['partnerGroup', 'hoursPerWon', 'hoursPer100k', 'avgHoursPerOppWithHours']);
+    return { key: ui.partnerSortKey, dir: ascKeys.has(ui.partnerSortKey) ? 'asc' : 'desc' };
   }
 
   function getWatchlistPartners(d) {
@@ -226,20 +238,19 @@
   }
 
   function getL3Options() {
-    const fromModel = (PD.state.model.opportunities || []).map((o) => PD.cleanText(o.region)).filter(Boolean);
-    const fromEngine = (PD.filterOptions && PD.filterOptions().region) || [];
-    return [...new Set(fromModel.concat(fromEngine))].sort((a, b) => a.localeCompare(b));
+    const cached = PD.state.model.filterOptionsCache?.region;
+    if (cached?.length) return cached;
+    return [...new Set((PD.state.model.opportunities || []).map((o) => PD.cleanText(o.region)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   }
 
   function getL4Options(l3) {
+    const cache = PD.state.model.filterOptionsCache;
+    if (l3 && l3 !== 'all' && cache?.subRegionByRegion?.[l3]) return cache.subRegionByRegion[l3];
+    if ((!l3 || l3 === 'all') && cache?.subRegion?.length) return cache.subRegion;
     let opps = PD.state.model.opportunities || [];
     if (l3 && l3 !== 'all') opps = opps.filter((o) => PD.cleanText(o.region) === l3);
     const fromModel = opps.map((o) => PD.cleanText(o.subRegion)).filter(Boolean);
-    const fromEngine = (PD.filterOptions && PD.filterOptions().subRegion) || [];
-    const engineFiltered = l3 && l3 !== 'all'
-      ? fromEngine.filter((sub) => opps.some((o) => PD.cleanText(o.subRegion) === sub))
-      : fromEngine;
-    return [...new Set(fromModel.concat(engineFiltered))].sort((a, b) => a.localeCompare(b));
+    return [...new Set(fromModel)].sort((a, b) => a.localeCompare(b));
   }
 
   function fillSelect(el, labelAll, values, current) {
@@ -328,55 +339,89 @@
     const pctWithHours = d.kpis.opportunities ? Math.round((d.kpis.oppsWithHours / d.kpis.opportunities) * 100) : 0;
 
     $('#overview-kpis').innerHTML = `
-      <article class="kpi"><p class="label">SC hours (filtered)</p><p class="value">${PD.formatHours(d.kpis.totalHours)}</p><p class="sub">${PD.formatInt(d.kpis.opportunities)} opportunities in scope</p></article>
-      <article class="kpi"><p class="label">Opps with SC time</p><p class="value">${pctWithHours}%</p><p class="sub">${PD.formatInt(d.kpis.oppsWithHours)} of ${PD.formatInt(d.kpis.opportunities)}</p></article>
+      <article class="kpi"><p class="label">SC hours (filtered)</p><p class="value">${PD.formatHours(d.kpis.totalHours)}</p><p class="sub">${PD.formatInt(d.kpis.opportunities)} opps · ${pctWithHours}% with SC time</p></article>
       <article class="kpi"><p class="label">Closed win rate</p><p class="value">${d.kpis.winRate !== null ? PD.formatPercent(d.kpis.winRate) : '–'}</p><p class="sub">Won vs lost in filter</p></article>
+      <article class="kpi"><p class="label">SC hours per won</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPerWon)}</p><p class="sub">Portfolio avg · filtered slice</p></article>
+      <article class="kpi"><p class="label">SC hours per $100k won</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPer100k)}</p><p class="sub">Uses Gross ACV Booking</p></article>
       <article class="kpi"><p class="label">Active partners</p><p class="value">${PD.formatInt(partners.length)}</p><p class="sub">${PD.formatInt(withHours.length)} with SC hours</p></article>
     `;
     $('#overview-note').textContent = d.taskHoursTotal ? `${PD.formatPercent(d.taskHoursMatched / d.taskHoursTotal)} of task hours matched to opps` : '';
   }
 
-  function renderCharts(d, partners) {
+  function renderCharts(d, partners, renderGen) {
     const medians = computeMedians(partners);
-    $('#chart-effectiveness').innerHTML = effectivenessBubbleSvg(partners);
-
-    const hourItems = PD.sortRows(partners.filter((p) => p.totalHours > 0), { key: 'totalHours', dir: 'desc' }).slice(0, 10).map((p) => ({
-      label: p.partnerGroup,
-      meta: `${PD.formatInt(p.opportunityCount)} opps · ${PD.formatPercent(p.winRate)}`,
-      value: p.totalHours,
-      valueLabel: PD.formatHours(p.totalHours)
-    }));
-    $('#chart-partner-hours').innerHTML = barSvg(hourItems, 'Top partners by SC hours');
-
-    const winItems = PD.sortRows(partners.filter((p) => p.closedCount >= 5 && p.winRate !== null), { key: 'winRate', dir: 'desc' }).slice(0, 10).map((p) => ({
-      label: p.partnerGroup,
-      meta: `${PD.formatInt(p.closedCount)} closed · ${PD.formatHours(p.totalHours)} SC`,
-      value: p.winRate,
-      valueLabel: PD.formatPercent(p.winRate)
-    }));
-    $('#chart-win-rate').innerHTML = barSvg(winItems, 'Win rate leaders');
-
-    const l3 = $('#filter-l3').value;
-    const useL4 = l3 && l3 !== 'all';
-    const regionRows = summarizeRegionHours(d.joined, useL4);
-    $('#region-chart-title').textContent = useL4 ? 'SC hours by sub-region (L4)' : 'SC hours by region (L3)';
-    $('#region-chart-sub').textContent = useL4 ? `Within ${l3}` : 'Pick an L3 filter to drill into L4';
-    const regionItems = regionRows.slice(0, 12).map((r) => ({
-      label: r.label,
-      meta: `${PD.formatInt(r.opportunityCount)} opps`,
-      value: r.totalHours,
-      valueLabel: PD.formatHours(r.totalHours)
-    }));
-    $('#chart-region-hours').innerHTML = barSvg(regionItems, 'SC hours by region');
-
-    $('#chart-outcome').innerHTML = outcomeSvg(d.outcomeSummary);
-    renderQuadrants(partners, medians);
+    const steps = [
+      () => { if (renderGen !== ui.renderGen || ui.page !== 'overview') return; $('#chart-effectiveness').innerHTML = effectivenessBubbleSvg(partners); },
+      () => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        const hourItems = PD.sortRows(partners.filter((p) => p.totalHours > 0), { key: 'totalHours', dir: 'desc' }).slice(0, 10).map((p) => ({
+          label: p.partnerGroup,
+          meta: `${PD.formatInt(p.opportunityCount)} opps · ${PD.formatPercent(p.winRate)}`,
+          value: p.totalHours,
+          valueLabel: PD.formatHours(p.totalHours)
+        }));
+        $('#chart-partner-hours').innerHTML = barSvg(hourItems, 'Top partners by SC hours');
+      },
+      () => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        const winItems = PD.sortRows(partners.filter((p) => p.closedCount >= 5 && p.winRate !== null), { key: 'winRate', dir: 'desc' }).slice(0, 10).map((p) => ({
+          label: p.partnerGroup,
+          meta: `${PD.formatInt(p.closedCount)} closed · ${PD.formatHours(p.totalHours)} SC`,
+          value: p.winRate,
+          valueLabel: PD.formatPercent(p.winRate)
+        }));
+        $('#chart-win-rate').innerHTML = barSvg(winItems, 'Win rate leaders');
+      },
+      () => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        const effItems = PD.sortRows(
+          partners.filter((p) => p.wonCount >= 3 && p.hoursPerWon !== null),
+          { key: 'hoursPerWon', dir: 'asc' }
+        ).slice(0, 10).map((p) => ({
+          label: p.partnerGroup,
+          meta: `${PD.formatInt(p.wonCount)} won · ${p.winRate !== null ? PD.formatPercent(p.winRate) : '–'} win rate`,
+          value: p.hoursPerWon,
+          valueLabel: formatEfficiencyHours(p.hoursPerWon)
+        }));
+        $('#chart-efficiency').innerHTML = effItems.length
+          ? barSvg(effItems, 'Lowest SC hours per won deal')
+          : emptyChart('Need partners with at least 3 won deals in the filter.');
+      },
+      () => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        const l3 = $('#filter-l3').value;
+        const useL4 = l3 && l3 !== 'all';
+        const regionRows = summarizeRegionHours(d.joined, useL4);
+        $('#region-chart-title').textContent = useL4 ? 'SC hours by sub-region (L4)' : 'SC hours by region (L3)';
+        $('#region-chart-sub').textContent = useL4 ? `Within ${l3}` : 'Pick an L3 filter to drill into L4';
+        const regionItems = regionRows.slice(0, 12).map((r) => ({
+          label: r.label,
+          meta: `${PD.formatInt(r.opportunityCount)} opps`,
+          value: r.totalHours,
+          valueLabel: PD.formatHours(r.totalHours)
+        }));
+        $('#chart-region-hours').innerHTML = barSvg(regionItems, 'SC hours by region');
+      },
+      () => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        $('#chart-outcome').innerHTML = outcomeSvg(d.outcomeSummary);
+        renderQuadrants(partners, medians);
+      }
+    ];
+    let step = 0;
+    function nextChartFrame() {
+      if (step >= steps.length) return;
+      steps[step]();
+      step += 1;
+      if (step < steps.length) requestAnimationFrame(nextChartFrame);
+    }
+    requestAnimationFrame(nextChartFrame);
   }
 
   function renderWatchlist(partners, medians) {
     const body = $('#watchlist-body');
     if (!partners.length) {
-      body.innerHTML = '<tr><td colspan="6" class="muted">No partners match the current filter.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="muted">No partners match the current filter.</td></tr>';
       return;
     }
     body.innerHTML = partners.map((p) => {
@@ -387,6 +432,7 @@
         <td>${PD.formatInt(p.opportunityCount)}</td>
         <td>${PD.formatHours(p.totalHours)}</td>
         <td>${p.winRate !== null ? PD.formatPercent(p.winRate) : '–'}</td>
+        <td>${formatEfficiencyHours(p.hoursPerWon)}</td>
         <td class="signal">${PD.escapeHtml(p.signal)}</td>
       </tr>`;
     }).join('');
@@ -417,50 +463,72 @@
     foot.textContent = `${direct.partnerGroup}: ${PD.formatInt(direct.opportunityCount)} opps · ${PD.formatHours(direct.totalHours)} SC hours — excluded from partner rankings. Toggle view to include.`;
   }
 
-  function renderScorecard(partners, medians) {
-    const sorted = PD.sortRows(partners, partnerSortState());
-    const body = $('#scorecard-body');
-    body.innerHTML = sorted.map((p) => {
-      const band = effectivenessBand(p, medians);
-      return `<tr class="clickable" data-partner-key="${PD.escapeHtml(p.partnerKey)}">
-        <td>${PD.escapeHtml(p.partnerGroup)}</td>
-        <td>${bandHtml(band)}</td>
-        <td>${PD.formatInt(p.opportunityCount)}</td>
-        <td>${PD.formatInt(p.oppsWithHours)}</td>
-        <td>${PD.formatHours(p.totalHours)}</td>
-        <td>${p.avgHoursPerOpp !== null ? PD.formatHours(p.avgHoursPerOpp) : '–'}</td>
-        <td>${PD.formatInt(p.wonCount)}</td>
-        <td>${PD.formatInt(p.lostCount)}</td>
-        <td>${PD.formatInt(p.openCount)}</td>
-        <td>${p.winRate !== null ? PD.formatPercent(p.winRate) : '–'}</td>
-        <td class="signal">${PD.escapeHtml(p.signal)}</td>
-      </tr>`;
-    }).join('');
+  function scorecardRowHtml(p, medians) {
+    const band = effectivenessBand(p, medians);
+    return `<tr class="clickable" data-partner-key="${PD.escapeHtml(p.partnerKey)}">
+      <td>${PD.escapeHtml(p.partnerGroup)}</td>
+      <td>${bandHtml(band)}</td>
+      <td>${PD.formatInt(p.opportunityCount)}</td>
+      <td>${PD.formatInt(p.oppsWithHours)}</td>
+      <td>${PD.formatHours(p.totalHours)}</td>
+      <td>${p.avgHoursPerOppWithHours !== null ? PD.formatHours(p.avgHoursPerOppWithHours) : '–'}</td>
+      <td>${formatEfficiencyHours(p.hoursPerWon)}</td>
+      <td>${formatEfficiencyHours(p.hoursPer100k)}</td>
+      <td>${PD.formatInt(p.wonCount)}</td>
+      <td>${PD.formatInt(p.lostCount)}</td>
+      <td>${PD.formatInt(p.openCount)}</td>
+      <td>${p.winRate !== null ? PD.formatPercent(p.winRate) : '–'}</td>
+      <td class="signal">${PD.escapeHtml(p.signal)}</td>
+    </tr>`;
   }
 
-  function renderDetail() {
-    const d = derived();
+  function renderScorecard(partners, medians, renderGen) {
+    const sorted = PD.sortRows(partners, partnerSortState());
+    const body = $('#scorecard-body');
+    if (!sorted.length) {
+      body.innerHTML = '<tr><td colspan="13" class="muted">No partners match the current filter.</td></tr>';
+      return;
+    }
+    const chunkSize = 75;
+    let index = 0;
+    body.innerHTML = scorecardRowHtml(sorted[0], medians);
+    index = 1;
+    function pump() {
+      if (renderGen !== ui.renderGen || ui.page !== 'partners') return;
+      const end = Math.min(index + chunkSize, sorted.length);
+      if (index >= end) return;
+      body.insertAdjacentHTML('beforeend', sorted.slice(index, end).map((p) => scorecardRowHtml(p, medians)).join(''));
+      index = end;
+      if (index < sorted.length) requestAnimationFrame(pump);
+    }
+    if (index < sorted.length) requestAnimationFrame(pump);
+  }
+
+  function renderDetail(d) {
+    const data = d || derived();
     const key = ui.selectedPartnerKey;
-    const partner = d.partnerSummary.find((p) => p.partnerKey === key);
+    const partner = data.partnerSummary.find((p) => p.partnerKey === key);
     if (!partner) {
       setPage('overview');
       return;
     }
-    const medians = computeMedians(filterPartners(d.partnerSummary));
+    const medians = computeMedians(filterPartners(data.partnerSummary));
     const band = effectivenessBand(partner, medians);
     const opps = PD.sortRows(
-      d.joined.filter((row) => (row.partnerKey || '') === key),
+      data.joined.filter((row) => (row.partnerKey || '') === key),
       { key: 'totalHours', dir: 'desc' }
     );
     const stages = PD.sortRows(PD.summarizeStages(opps), { key: 'totalHours', dir: 'desc' });
     const totalStageHrs = stages.reduce((s, r) => s + r.totalHours, 0);
+    const oppKeySet = new Set(opps.map((o) => o.opportunityKey));
+    const aliases = PD.state.model.taskKeyAliases || {};
     const activities = PD.sortRows(PD.summarizeActivities(
-      (PD.state.model.tasks || []).filter((t) => opps.some((o) => o.opportunityKey === t.opportunityKey))
+      (PD.state.model.tasks || []).filter((t) => oppKeySet.has(aliases[t.opportunityKey] || t.opportunityKey))
     ), { key: 'totalHours', dir: 'desc' });
 
     $('#detail-hero').innerHTML = `
       <h2>${PD.escapeHtml(partner.partnerGroup)} ${bandHtml(band)}</h2>
-      <p>${PD.formatHours(partner.totalHours)} across ${PD.formatInt(partner.opportunityCount)} opportunities (${partner.avgHoursPerOpp !== null ? PD.formatHours(partner.avgHoursPerOpp) : '–'} per opp, ${PD.formatInt(partner.oppsWithHours)} with SC time). ${partner.winRate !== null ? `Win rate ${PD.formatPercent(partner.winRate)} (${PD.formatInt(partner.wonCount)} won / ${PD.formatInt(partner.closedCount)} closed).` : ''} ${PD.escapeHtml(partner.signal)}.</p>
+      <p>${PD.formatHours(partner.totalHours)} across ${PD.formatInt(partner.opportunityCount)} opportunities (${partner.avgHoursPerOppWithHours !== null ? PD.formatHours(partner.avgHoursPerOppWithHours) : '–'} per opp with SC time, ${PD.formatInt(partner.oppsWithHours)} opps with hours). ${partner.winRate !== null ? `Win rate ${PD.formatPercent(partner.winRate)} (${PD.formatInt(partner.wonCount)} won / ${PD.formatInt(partner.closedCount)} closed).` : ''} SC efficiency: ${formatEfficiencyHours(partner.hoursPerWon)} per won · ${formatEfficiencyHours(partner.hoursPer100k)} per $100k won. ${PD.escapeHtml(partner.signal)}.</p>
     `;
 
     const pipelineRows = opps.length
@@ -566,16 +634,45 @@
       : '<li class="muted">No files loaded yet.</li>';
   }
 
+  let renderQueued = false;
+  let renderSortOnly = false;
+
+  function scheduleRender(sortOnly) {
+    if (sortOnly) renderSortOnly = true;
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        renderQueued = false;
+        const sort = renderSortOnly;
+        renderSortOnly = false;
+        if (sort && hasData() && ui.page === 'partners') {
+          ui.renderGen += 1;
+          const d = derived();
+          renderScorecard(filterPartners(d.partnerSummary), computeMedians(filterPartners(d.partnerSummary)), ui.renderGen);
+          return;
+        }
+        renderAll();
+      }, 0);
+    });
+  }
+
   function renderAll() {
+    ui.renderGen += 1;
+    const renderGen = ui.renderGen;
+
     renderStatus();
-    renderAdmin();
 
     if (!hasData()) {
+      if (ui.page === 'admin') renderAdmin();
       renderEmpty();
       return;
     }
 
-    populateRegionFilters();
+    if (!ui.regionFiltersReady) {
+      populateRegionFilters();
+      ui.regionFiltersReady = true;
+    }
 
     if (ui.page === 'empty') ui.page = 'overview';
 
@@ -587,13 +684,18 @@
     if (ui.page === 'overview') {
       renderKpis(d, partners);
       renderInsight(d, watch);
-      renderCharts(d, partners);
       renderWatchlist(watch, medians);
       renderFootnote(d);
+      requestAnimationFrame(() => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        renderCharts(d, partners, renderGen);
+      });
     } else if (ui.page === 'partners') {
-      renderScorecard(partners, medians);
+      renderScorecard(partners, medians, renderGen);
     } else if (ui.page === 'detail') {
-      renderDetail();
+      renderDetail(d);
+    } else if (ui.page === 'admin') {
+      renderAdmin();
     }
 
     setPage(ui.page);
@@ -605,7 +707,7 @@
     ui.page = 'detail';
     ui.detailSub = 'pipeline';
     document.querySelectorAll('.subtab').forEach((b) => b.classList.toggle('active', b.dataset.sub === 'pipeline'));
-    renderAll();
+    scheduleRender();
   }
 
   function syncViewMode(value) {
@@ -613,7 +715,7 @@
     $('#view-mode').value = value;
     $('#view-mode-scorecard').value = value;
     invalidateDerived();
-    renderAll();
+    scheduleRender();
   }
 
   function onRegionChange(fromScorecard) {
@@ -627,7 +729,7 @@
     else $('#filter-l3-scorecard').value = l3;
     syncRegionFilters(fromScorecard);
     invalidateDerived();
-    renderAll();
+    scheduleRender();
   }
 
   let searchTimer = null;
@@ -644,8 +746,10 @@
         if (parsedFile.recognized) parsed.push(parsedFile);
       }
       PD.state.__parsedFiles = (PD.state.__parsedFiles || []).concat(parsed);
+      await new Promise((resolve) => setTimeout(resolve, 0));
       PD.state.model = PD.buildDataModel(PD.state.__parsedFiles);
       invalidateDerived();
+      ui.regionFiltersReady = false;
       if (!parsed.length) {
         window.alert('None of the uploaded files matched expected task or opportunity layouts.');
       } else {
@@ -656,7 +760,7 @@
       window.alert(`Could not parse a file: ${err.message}`);
     } finally {
       $('#loading').classList.remove('active');
-      renderAll();
+      scheduleRender();
     }
   }
 
@@ -689,10 +793,11 @@
       ['region', 'subRegion', 'partnerName', 'partnerGroup', 'directIndirect', 'opportunityOwner', 'ownerRole', 'stage', 'outcome', 'oppType', 'fiscalPeriod', 'closeYear', 'accountName', 'assigned', 'activityType', 'taskYear', 'learnerEmail', 'learningCourse', 'learningState'].map((k) => [k, new Set()])
     );
     invalidateDerived();
+    ui.regionFiltersReady = false;
     ui.selectedPartnerKey = null;
     ui.page = 'empty';
     $('#global-search').value = '';
-    renderAll();
+    scheduleRender();
   }
 
   function exportPartnersCsv() {
@@ -707,6 +812,10 @@
       OppsWithHours: p.oppsWithHours,
       SCHours: p.totalHours,
       SCHoursPerOpp: p.avgHoursPerOpp,
+      SCHoursPerOppWithHours: p.avgHoursPerOppWithHours,
+      HoursPerWon: p.hoursPerWon,
+      HoursPer100kWon: p.hoursPer100k,
+      WonValue: p.wonValue,
       Won: p.wonCount,
       Lost: p.lostCount,
       Open: p.openCount,
@@ -738,18 +847,18 @@
       btn.addEventListener('click', () => {
         if (btn.disabled) return;
         ui.page = btn.dataset.page;
-        renderAll();
+        scheduleRender();
       });
     });
 
     $('#goto-admin').addEventListener('click', () => {
       ui.page = 'admin';
-      renderAll();
+      scheduleRender();
     });
 
     $('#detail-back').addEventListener('click', () => {
       ui.page = 'overview';
-      renderAll();
+      scheduleRender();
     });
 
     $('#global-search').addEventListener('input', (e) => {
@@ -757,21 +866,21 @@
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
         invalidateDerived();
-        renderAll();
+        scheduleRender();
       }, 300);
     });
 
     $('#filter-l3').addEventListener('change', () => { invalidateDerived(); onRegionChange(false); });
-    $('#filter-l4').addEventListener('change', () => { syncRegionFilters(false); invalidateDerived(); renderAll(); });
+    $('#filter-l4').addEventListener('change', () => { syncRegionFilters(false); invalidateDerived(); scheduleRender(); });
     $('#filter-l3-scorecard').addEventListener('change', () => { invalidateDerived(); onRegionChange(true); });
-    $('#filter-l4-scorecard').addEventListener('change', () => { syncRegionFilters(true); invalidateDerived(); renderAll(); });
+    $('#filter-l4-scorecard').addEventListener('change', () => { syncRegionFilters(true); invalidateDerived(); scheduleRender(); });
 
     $('#view-mode').addEventListener('change', (e) => syncViewMode(e.target.value));
     $('#view-mode-scorecard').addEventListener('change', (e) => syncViewMode(e.target.value));
 
     $('#partner-sort').addEventListener('change', (e) => {
       ui.partnerSortKey = e.target.value;
-      renderAll();
+      scheduleRender(true);
     });
 
     $('#export-partners').addEventListener('click', exportPartnersCsv);
@@ -798,7 +907,7 @@
 
     document.body.addEventListener('click', (e) => {
       const row = e.target.closest('[data-partner-key]');
-      if (row) openPartner(row.getAttribute('data-partner-key'));
+      if (row)     openPartner(row.getAttribute('data-partner-key'));
     });
 
     document.querySelectorAll('.subtab').forEach((btn) => {
@@ -811,5 +920,5 @@
   }
 
   bindEvents();
-  renderAll();
+  scheduleRender();
 })();

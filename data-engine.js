@@ -509,7 +509,8 @@
         candidates.set(opp.opportunityKey, opp);
       }
     }
-    const pool = candidates.size ? Array.from(candidates.values()) : opportunities;
+    const pool = candidates.size ? Array.from(candidates.values()) : [];
+    if (!pool.length) return null;
     let best = null;
     let bestScore = 0;
     for (const opp of pool) {
@@ -517,6 +518,7 @@
       if (score > bestScore) {
         bestScore = score;
         best = opp;
+        if (bestScore >= 0.95) break;
       }
     }
     if (best && bestScore >= 0.35) return { opp: best, score: bestScore };
@@ -1216,6 +1218,7 @@
   }
 
   function buildDataModel(parsedFiles) {
+    invalidateDerivedCache();
     Object.keys(customDomainPartnerMap).forEach((key) => { delete customDomainPartnerMap[key]; });
     autoDomainPartnerMap = {};
     domainMappingReport = { autoMapped: [], ambiguous: [], unmapped: [] };
@@ -1326,6 +1329,23 @@
       }
     };
     model.taskJoinBreakdown = computeTaskJoinBreakdown(model);
+    model.totalTaskHours = hasRawTasks
+      ? Array.from(taskAgg.values()).reduce((sum, row) => sum + row.totalHours, 0)
+      : 0;
+    const regions = [...new Set(opportunities.map((o) => o.region).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const subRegionByRegion = {};
+    const allSubRegions = new Set();
+    for (const opp of opportunities) {
+      if (!opp.region || !opp.subRegion) continue;
+      if (!subRegionByRegion[opp.region]) subRegionByRegion[opp.region] = new Set();
+      subRegionByRegion[opp.region].add(opp.subRegion);
+      allSubRegions.add(opp.subRegion);
+    }
+    model.filterOptionsCache = {
+      region: regions,
+      subRegionByRegion: Object.fromEntries(Object.entries(subRegionByRegion).map(([k, v]) => [k, [...v].sort((a, b) => a.localeCompare(b))])),
+      subRegion: [...allSubRegions].sort((a, b) => a.localeCompare(b))
+    };
     return model;
   }
 
@@ -1359,14 +1379,21 @@
     const haystack = [row.opportunityName, row.accountName, row.partnerName, row.partnerGroup, row.opportunityOwner, row.stage, row.region, row.subRegion].map(keyify).join('|');
     return haystack.includes(q);
   }
+  function passesOppRecordFilters(row) {
+    for (const filter of FILTERS) {
+      if (filter.level !== 'opp') continue;
+      const selected = state.filters.selections[filter.key];
+      if (selected.size && !selected.has(cleanText(row[filter.key]))) return false;
+    }
+    return true;
+  }
   function applyOppFilters(rows) {
-    return rows.filter((row) => {
-      if (!searchMatch(row)) return false;
-      for (const filter of FILTERS) {
-        if (filter.level !== 'opp') continue;
-        const selected = state.filters.selections[filter.key];
-        if (selected.size && !selected.has(cleanText(row[filter.key]))) return false;
-      }
+    return rows.filter((row) => searchMatch(row) && passesOppRecordFilters(row));
+  }
+  function opportunitiesForJoin() {
+    return state.model.opportunities.filter((row) => {
+      if (!passesOppRecordFilters(row)) return false;
+      if (keyify(state.filters.search) && !searchMatch(row)) return false;
       return true;
     });
   }
@@ -1376,14 +1403,22 @@
       const learning = learningAgg.get(opp.partnerKey || '');
       const totalHours = agg ? agg.totalHours : (useSeed ? (opp.seedHours || 0) : 0);
       const taskCount = agg ? agg.taskCount : (useSeed && opp.seedHours ? 1 : 0);
-      const consultants = agg ? Array.from(agg.consultants) : [];
-      const topActivity = agg && agg.activityHours.size ? Array.from(agg.activityHours.entries()).sort((a, b) => b[1] - a[1])[0][0] : '';
+      let topActivity = '';
+      if (agg && agg.activityHours.size) {
+        let topHours = 0;
+        for (const [activity, hours] of agg.activityHours.entries()) {
+          if (hours > topHours) {
+            topHours = hours;
+            topActivity = activity;
+          }
+        }
+      }
       return {
         ...opp,
         totalHours,
         taskCount,
-        consultantCount: consultants.length,
-        consultants,
+        consultantCount: agg ? agg.consultants.size : 0,
+        consultants: [],
         latestTaskDate: agg ? agg.latestTaskDate : null,
         earliestTaskDate: agg ? agg.earliestTaskDate : null,
         topActivity,
@@ -1560,7 +1595,26 @@
     return aliases[task.opportunityKey] || task.opportunityKey;
   }
 
+  let derivedCacheKey = '';
+  let derivedCacheData = null;
+
+  function derivedFilterCacheKey() {
+    const parts = [state.filters.search || ''];
+    for (const filter of FILTERS) {
+      parts.push([...state.filters.selections[filter.key]].sort().join('|'));
+    }
+    return parts.join('::');
+  }
+
+  function invalidateDerivedCache() {
+    derivedCacheKey = '';
+    derivedCacheData = null;
+  }
+
   function getDerivedData() {
+    const cacheKey = derivedFilterCacheKey();
+    if (derivedCacheData && derivedCacheKey === cacheKey) return derivedCacheData;
+
     const filteredTasks = state.model.hasRawTasks ? applyTaskFilters(state.model.tasks) : [];
     const filteredLearning = applyLearningFilters(state.model.learningRows || []);
     let taskAgg;
@@ -1573,10 +1627,10 @@
       taskAgg = aggregateSeed(state.model.opportunities);
     }
     const learningAgg = aggregateLearningByPartner(filteredLearning);
-    let joined = joinOpps(state.model.opportunities, taskAgg, !state.model.hasRawTasks, learningAgg);
+    const oppsToJoin = opportunitiesForJoin();
+    let joined = joinOpps(oppsToJoin, taskAgg, !state.model.hasRawTasks, learningAgg);
     if (taskFiltersActive()) joined = joined.filter((row) => row.totalHours > 0);
     if (learningFiltersActive()) joined = joined.filter((row) => row.learningSeconds > 0 || row.learnerCount > 0);
-    joined = applyOppFilters(joined);
     const oppKeys = new Set(joined.map((row) => row.opportunityKey));
     const partnerKeys = new Set(joined.map((row) => row.partnerKey));
     const tasksInScope = state.model.hasRawTasks ? filteredTasks.filter((task) => oppKeys.has(resolvedTaskOpportunityKey(task))) : [];
@@ -1597,8 +1651,8 @@
     const learningSeconds = learningInScope.reduce((sum, row) => sum + (row.learningSeconds || 0), 0);
     const engagedLearners = new Set(learningInScope.filter((row) => row.engagedFlag).map((row) => row.email)).size;
     const totalLearners = new Set(learningInScope.map((row) => row.email)).size;
-    const joinedOppKeys = new Set(joined.map((row) => row.opportunityKey));
-    return {
+    derivedCacheKey = cacheKey;
+    derivedCacheData = {
       joined,
       tasksInScope,
       learningInScope,
@@ -1627,9 +1681,10 @@
       topOpportunity: sortRows(joined.filter((row) => row.totalHours > 0), { key: 'totalHours', dir: 'desc' })[0] || null,
       topLearner: sortRows(learnerSummary.filter((row) => row.learningSeconds > 0), { key: 'learningSeconds', dir: 'desc' })[0] || null,
       watchPartner: sortRows(partnerSummary.filter((row) => row.signalClass === 'signal-alert' || row.signalClass === 'signal-watch'), { key: 'riskScore', dir: 'desc' })[0] || null,
-      taskHoursMatched: Array.from(taskAgg.values()).filter((row) => joinedOppKeys.has(row.opportunityKey)).reduce((sum, row) => sum + row.totalHours, 0),
-      taskHoursTotal: Array.from(taskAgg.values()).reduce((sum, row) => sum + row.totalHours, 0)
+      taskHoursMatched: totalHours,
+      taskHoursTotal: state.model.totalTaskHours || totalHours
     };
+    return derivedCacheData;
   }
 
 
@@ -2074,6 +2129,7 @@
     parseSpreadsheetBuffer,
     buildDataModel,
     getDerivedData,
+    invalidateDerivedCache,
     state,
     formatHours,
     formatDuration,

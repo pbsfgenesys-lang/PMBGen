@@ -101,6 +101,15 @@
       <article class="panel" style="margin-top:16px">
         <div class="panel-head">
           <div>
+            <h2>SC efficiency leaders</h2>
+            <p>Lowest SC hours per won deal — minimum 3 wins in filter</p>
+          </div>
+        </div>
+        <div id="chart-efficiency" class="chart-host"></div>
+      </article>
+      <article class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <div>
             <h2 id="region-chart-title">SC hours by region</h2>
             <p id="region-chart-sub">Aggregated from filtered opportunities</p>
           </div>
@@ -124,6 +133,7 @@
                   <th>Opps</th>
                   <th>SC hrs</th>
                   <th>Win rate</th>
+                  <th>Hrs / won</th>
                   <th>Signal</th>
                 </tr>
               </thead>
@@ -155,10 +165,12 @@
         <label>Sort by
           <select id="partner-sort">
             <option value="totalHours">SC hours</option>
+            <option value="hoursPerWon">SC hours / won</option>
+            <option value="hoursPer100k">SC hours / $100k won</option>
             <option value="opportunityCount">Opportunity count</option>
             <option value="winRate">Win rate</option>
             <option value="riskScore">Review priority</option>
-            <option value="avgHoursPerOpp">SC hrs / opp</option>
+            <option value="avgHoursPerOppWithHours">SC hrs / opp (with hours)</option>
           </select>
         </label>
         <label>View
@@ -186,6 +198,8 @@
                 <th>Opps w/ hrs</th>
                 <th>SC hrs</th>
                 <th>SC hrs/opp</th>
+                <th>Hrs / won</th>
+                <th>Hrs / $100k won</th>
                 <th>Won</th>
                 <th>Lost</th>
                 <th>Open</th>
