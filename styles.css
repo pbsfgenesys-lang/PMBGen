@@ -39,6 +39,9 @@ html, body {
   padding: 14px 28px;
   font-size: 0.92rem;
 }
+.partner-view-banner.hidden {
+  display: none;
+}
 .partner-view-banner-inner {
   display: flex;
   justify-content: space-between;
@@ -46,27 +49,32 @@ html, body {
   flex-wrap: wrap;
   align-items: flex-start;
 }
-.partner-view-banner p {
-  margin: 6px 0 0;
-  max-width: 760px;
-}
-.partner-view-learning-note {
-  font-size: 0.88rem;
-  color: #7a6218;
-}
-.partner-view-banner-links {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.partner-view-banner-compact {
   align-items: center;
+  justify-content: flex-end;
+  padding: 0;
+  gap: 12px;
+  font-size: 0.84rem;
 }
-.partner-view-banner-links a {
-  color: var(--brand);
-  font-weight: 600;
+.partner-view-footer {
+  padding: 10px 28px 18px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: right;
+}
+.partner-view-footer.hidden {
+  display: none;
+}
+.partner-view-footer a {
+  color: var(--muted);
   text-decoration: none;
 }
-.partner-view-banner-links a:hover {
+.partner-view-footer a:hover {
+  color: var(--brand);
   text-decoration: underline;
+}
+.partner-view-footer-text {
+  margin-right: 4px;
 }
 .partner-view-tag {
   background: #fff;

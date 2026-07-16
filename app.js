@@ -33,34 +33,28 @@
 
   function renderPartnerViewBanner() {
     const host = $('#partner-view-banner');
-    if (!host || !PD.getPartnerViewMeta) return;
+    const footer = $('#partner-view-footer');
+    if (!host) return;
     const meta = partnerViewMeta();
-    const other = meta.mode === 'strict-sf'
-      ? { href: '/PMBGen/brand-rollup/', label: 'Brand rollup view' }
-      : { href: '/PMBGen/strict-sf/', label: 'Strict Salesforce view' };
-    host.innerHTML = `<div class="partner-view-banner-inner">
-      <div>
-        <strong>${PD.escapeHtml(meta.title)}</strong>
-        <p>${PD.escapeHtml(meta.description)}</p>
-        <p class="partner-view-learning-note">${PD.escapeHtml(meta.learningNote)}</p>
-      </div>
-      <div class="partner-view-banner-links">
-        <span class="partner-view-tag">${meta.mode === 'strict-sf' ? 'Legal entities on opps' : 'Brand families'}</span>
-        <a href="${other.href}">Switch to ${PD.escapeHtml(other.label)}</a>
-        <a href="/PMBGen/">All views</a>
-      </div>
+    if (meta.mode === 'strict-sf') {
+      host.classList.add('hidden');
+      host.innerHTML = '';
+      if (footer) {
+        footer.classList.remove('hidden');
+        footer.innerHTML = '<span class="partner-view-footer-text">Alternative lens:</span> <a href="/PMBGen/brand-rollup/">Global brand summary</a>';
+      }
+      return;
+    }
+    if (footer) footer.classList.add('hidden');
+    if (!PD.getPartnerViewMeta) return;
+    host.classList.remove('hidden');
+    host.innerHTML = `<div class="partner-view-banner-inner partner-view-banner-compact">
+      <span class="partner-view-tag">Global brand summary</span>
+      <a href="/PMBGen/strict-sf/">Switch to standard dashboard</a>
     </div>`;
   }
 
   function partnerNameCell(p) {
-    const meta = partnerViewMeta();
-    if (meta.mode === 'strict-sf' && p.brandFamily && p.brandFamily !== p.partnerGroup) {
-      const shared = p.learningSharedAcross > 1 ? ` · learning shared across ${p.learningSharedAcross} legal entities` : '';
-      return `<strong>${PD.escapeHtml(p.partnerGroup)}</strong><div class="table-subtext">Brand: ${PD.escapeHtml(p.brandFamily)}${shared}</div>`;
-    }
-    if (meta.mode === 'brand-rollup' && p.legalEntity && p.legalEntity !== p.partnerGroup) {
-      return `<strong>${PD.escapeHtml(p.partnerGroup)}</strong><div class="table-subtext">Salesforce legal entities roll up to this brand</div>`;
-    }
     return `<strong>${PD.escapeHtml(p.partnerGroup)}</strong>`;
   }
 
@@ -1164,8 +1158,11 @@
         const auto = (domainReport.autoMapped || []).length;
         const amb = (domainReport.ambiguous || []).length;
         const unmapped = (domainReport.unmapped || []).length;
+        const learningContext = partnerViewMeta().mode === 'strict-sf'
+          ? ' Learning hours are mapped from email domains to partner organisations (same names as Salesforce on opportunities and SC hours). Where one email domain covers several regional legal entities, learning is grouped at organisation level.'
+          : '';
         domainNote.innerHTML = hasLearningData()
-          ? `<strong>Domain mapping:</strong> ${PD.formatInt(auto)} auto-matched · ${PD.formatInt(amb)} ambiguous · ${PD.formatInt(unmapped)} unmapped. Upload <code>partner-domain-map.csv</code> (Email Domain, Partner Name) — stored in your browser only. Template: <a href="partner-domain-map.template.csv">partner-domain-map.template.csv</a>.`
+          ? `<strong>Domain mapping:</strong> ${PD.formatInt(auto)} auto-matched · ${PD.formatInt(amb)} ambiguous · ${PD.formatInt(unmapped)} unmapped. Upload <code>partner-domain-map.csv</code> (Email Domain, Partner Name) — stored in your browser only. Template: <a href="partner-domain-map.template.csv">partner-domain-map.template.csv</a>.${learningContext}`
           : '';
       }
     } else if (domainBody) {
