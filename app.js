@@ -527,13 +527,21 @@
   function renderEfficiencyHeatmap(partners, joined) {
     const host = $('#partner-efficiency-heatmap');
     const note = $('#heatmap-footnote');
+    const legendNote = $('#heatmap-legend-note');
     if (!host) return;
     if (note) note.textContent = scTrackingFootnote();
 
     const data = buildEfficiencyHeatmap(partners, joined);
     if (!data.rows.length || !data.quarters.length) {
+      if (legendNote) legendNote.textContent = '';
       host.innerHTML = '<p class="muted">Need dated SC tasks and partners with logged hours in the current filter.</p>';
       return;
+    }
+
+    const low = formatEfficiencyHours(data.thresholds.low);
+    const high = formatEfficiencyHours(data.thresholds.high);
+    if (legendNote) {
+      legendNote.textContent = `Colour bands are comparative for this view only — not fixed targets. Among partner-quarters shown here (top 24 partners by SC hours in your current filter), green is the lowest third of SC hours per won (≤${low}), amber is the middle third (${low}–${high}), and red is the highest third (>${high}). Cell numbers are SC hours per won that quarter.`;
     }
 
     const header = `<tr><th class="heat-sticky">Partner</th>${data.quarters.map((q) => `<th>${PD.escapeHtml(quarterLabelShort(q))}</th>`).join('')}</tr>`;
@@ -555,11 +563,11 @@
         <tbody>${body}</tbody>
       </table>
       <div class="heat-legend">
-        <span class="heat-good">Low SC hrs / won (≤${formatEfficiencyHours(data.thresholds.low)})</span>
-        <span class="heat-mid">Medium</span>
-        <span class="heat-bad">High reliance</span>
-        <span class="heat-pending">SC logged, no wins (†)</span>
-        <span class="heat-empty">No activity</span>
+        <span class="heat-good">Green — lowest third (≤${low})</span>
+        <span class="heat-mid">Amber — middle third (${low}–${high})</span>
+        <span class="heat-bad">Red — highest third (>${high})</span>
+        <span class="heat-pending">Blue — SC logged, no wins that quarter (†)</span>
+        <span class="heat-empty">Grey — no SC and no closes</span>
       </div>
     `;
   }
