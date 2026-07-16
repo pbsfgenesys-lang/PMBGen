@@ -1262,6 +1262,145 @@
     return finalMap;
   }
 
+  const COVERAGE_MIN_YEAR = 2000;
+  const COVERAGE_MAX_YEAR = 2035;
+
+  function sanitizeCoverageDate(value) {
+    const date = value instanceof Date ? value : parseDateValue(value);
+    if (!date || Number.isNaN(date.getTime())) return null;
+    const year = date.getFullYear();
+    if (year < COVERAGE_MIN_YEAR || year > COVERAGE_MAX_YEAR) return null;
+    return date;
+  }
+
+  function dateRangeFrom(values) {
+    const valid = values.map((value) => sanitizeCoverageDate(value)).filter(Boolean).sort((a, b) => a - b);
+    if (!valid.length) return { min: null, max: null, count: 0 };
+    return { min: valid[0], max: valid[valid.length - 1], count: valid.length };
+  }
+
+  function coverageRangeLabel(range) {
+    if (!range?.min || !range?.max) return '–';
+    if (range.min.getTime() === range.max.getTime()) return formatShortDate(range.min);
+    return `${formatShortDate(range.min)} – ${formatShortDate(range.max)}`;
+  }
+
+  function summarizeCoverageFile(fileName, tasks, opportunities, learningRows) {
+    const taskRows = tasks.filter((row) => row.sourceFile === fileName);
+    const oppRows = opportunities.filter((row) => (row.sourceFiles || [row.sourceFile]).includes(fileName));
+    const learnRows = learningRows.filter((row) => row.sourceFile === fileName);
+    const taskRange = dateRangeFrom(taskRows.map((row) => row.taskDate));
+    const closeRange = dateRangeFrom(oppRows.map((row) => row.closeDate));
+    const createdRange = dateRangeFrom(oppRows.map((row) => row.createdDate));
+    const learningYears = {};
+    for (const row of learnRows) {
+      const year = cleanText(row.occurredYear) || 'Unknown';
+      learningYears[year] = (learningYears[year] || 0) + 1;
+    }
+    let kind = 'Unknown';
+    if (taskRows.length) kind = 'Tasks';
+    else if (oppRows.length) kind = 'Opportunities';
+    else if (learnRows.length) kind = 'Learning';
+    return {
+      fileName,
+      kind,
+      taskRows: taskRows.length,
+      oppRows: oppRows.length,
+      learningRows: learnRows.length,
+      taskRange,
+      closeRange,
+      createdRange,
+      learningYears
+    };
+  }
+
+  function computeDataCoverage(model) {
+    const tasks = model.tasks || [];
+    const opportunities = model.opportunities || [];
+    const learningRows = model.learningRows || [];
+    const taskRange = dateRangeFrom(tasks.map((row) => row.taskDate));
+    const closeRange = dateRangeFrom(opportunities.map((row) => row.closeDate));
+    const createdRange = dateRangeFrom(opportunities.map((row) => row.createdDate));
+    const badCloseDates = opportunities.filter((row) => {
+      if (!row.closeDate || Number.isNaN(row.closeDate.getTime())) return false;
+      const year = row.closeDate.getFullYear();
+      return year < COVERAGE_MIN_YEAR || year > COVERAGE_MAX_YEAR;
+    }).length;
+    const learningYears = {};
+    for (const row of learningRows) {
+      const year = cleanText(row.occurredYear) || 'Unknown';
+      learningYears[year] = (learningYears[year] || 0) + 1;
+    }
+    const closedCount = opportunities.filter((row) => row.outcome === 'Won' || row.outcome === 'Lost').length;
+    const openCount = opportunities.filter((row) => row.outcome === 'Open').length;
+    const warnings = [];
+    if (taskRange.min && createdRange.min && taskRange.min > createdRange.min) {
+      warnings.push({
+        level: 'warn',
+        text: `Task hours only span ${coverageRangeLabel(taskRange)} but opportunities were created from ${formatShortDate(createdRange.min)} — SC effort on older deals may be missing from the task export window.`
+      });
+    }
+    if (taskRange.max && closeRange.max && taskRange.max < closeRange.max) {
+      warnings.push({
+        level: 'info',
+        text: `Latest task is ${formatShortDate(taskRange.max)} while some opportunities close through ${formatShortDate(closeRange.max)} — recent SC work may not yet appear on later close dates.`
+      });
+    }
+    if (Object.keys(learningYears).length > 1 || (Object.keys(learningYears).length === 1 && !learningYears.Unknown && taskRange.min)) {
+      const learnLabel = Object.keys(learningYears).sort().join(', ');
+      if (taskRange.min || taskRange.max) {
+        warnings.push({
+          level: 'info',
+          text: `Learning export covers calendar year(s) ${learnLabel}; task export covers ${coverageRangeLabel(taskRange)} — compare learning and SC trends only where periods overlap.`
+        });
+      }
+    }
+    if (badCloseDates > 0) {
+      warnings.push({
+        level: 'warn',
+        text: `${formatInt(badCloseDates)} opportunities have close dates outside ${COVERAGE_MIN_YEAR}–${COVERAGE_MAX_YEAR} and are excluded from coverage labels and partner trend charts.`
+      });
+    }
+    const breakdown = model.taskJoinBreakdown || null;
+    if (breakdown?.totalHours && breakdown.matchedHours / breakdown.totalHours < 0.85) {
+      warnings.push({
+        level: 'warn',
+        text: `Only ${formatPercent(breakdown.matchedHours / breakdown.totalHours)} of task hours match an opportunity row — check that task and opportunity exports use the same territory, indirect scope, and overlapping date filters.`
+      });
+    }
+    const oppFileCount = (model.files || []).filter((file) => file.oppRows > 0).length;
+    if (oppFileCount > 1) {
+      warnings.push({
+        level: 'info',
+        text: `${oppFileCount} opportunity exports loaded — rows are merged and deduplicated by opportunity name; confirm both use compatible filters.`
+      });
+    }
+    const fileSummaries = (model.files || [])
+      .map((file) => summarizeCoverageFile(file.fileName, tasks, opportunities, learningRows))
+      .filter((file) => file.taskRows || file.oppRows || file.learningRows);
+    return {
+      tasks: { range: taskRange, count: tasks.length, label: coverageRangeLabel(taskRange) },
+      opportunities: {
+        close: closeRange,
+        created: createdRange,
+        count: opportunities.length,
+        closedCount,
+        openCount,
+        badCloseDates,
+        closeLabel: coverageRangeLabel(closeRange),
+        createdLabel: coverageRangeLabel(createdRange)
+      },
+      learning: {
+        years: learningYears,
+        count: learningRows.length,
+        label: Object.keys(learningYears).sort().join(', ') || '–'
+      },
+      warnings,
+      fileSummaries,
+      taskJoinMatchRate: breakdown?.totalHours ? breakdown.matchedHours / breakdown.totalHours : null
+    };
+  }
+
   function buildDataModel(parsedFiles) {
     invalidateDerivedCache();
     Object.keys(customDomainPartnerMap).forEach((key) => { delete customDomainPartnerMap[key]; });
@@ -1375,6 +1514,7 @@
       }
     };
     model.taskJoinBreakdown = computeTaskJoinBreakdown(model);
+    model.dataCoverage = computeDataCoverage(model);
     model.totalTaskHours = hasRawTasks
       ? Array.from(taskAgg.values()).reduce((sum, row) => sum + row.totalHours, 0)
       : 0;
@@ -2189,9 +2329,11 @@
     summarizeActivities,
     filterOptions,
     getTaskJoinBreakdown,
+    getDataCoverage: () => state.model?.dataCoverage || null,
     getDomainMappingReport,
     getCustomDomainPartnerMap,
-    setPersistedDomainMap
+    setPersistedDomainMap,
+    formatShortDate
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.PartnerDashboard = api;

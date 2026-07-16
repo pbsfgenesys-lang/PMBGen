@@ -1,0 +1,15 @@
+# Salesforce / Seismic exports and derived mapping files — never commit
+partner-domain-map-upload.csv
+partner-domain-map-confirmed.csv
+partner-domain-map-suggested.csv
+partner-domain-map-suggested-review.csv
+partner-domain-map-unmapped*.csv
+*.xls
+*.xlsx
+*learning*.csv
+trainingData*.csv
+genie*.csv
+report*.xls
+
+# OS / editor
+.DS_Store

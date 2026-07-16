@@ -21,6 +21,8 @@ Published on GitHub Pages from `main`: [https://pbsfgenesys-lang.github.io/PMBGe
 
 No backend; data never leaves the user's browser.
 
+**Domain map CSV:** load via Admin from your team's SharePoint share — it is **not** stored in this repository (confidential).
+
 ## Files
 
 - `index.html` — UI shell

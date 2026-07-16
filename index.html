@@ -54,6 +54,7 @@
         </label>
         <span class="note" id="overview-note"></span>
       </div>
+      <div id="data-coverage-banner" class="coverage-banner hidden" aria-live="polite"></div>
       <div id="overview-kpis" class="kpis"></div>
       <div id="overview-insight"></div>
       <div class="grid-2">
@@ -115,6 +116,16 @@
           </div>
         </div>
         <div id="chart-learning-partners" class="chart-host"></div>
+      </article>
+      <article class="panel hidden" id="learning-conversion-panel" style="margin-top:16px">
+        <div class="panel-head">
+          <div>
+            <h2>Learning vs conversion</h2>
+            <p>Learning hours per learner vs closed win rate — bubble size = closed deals</p>
+          </div>
+        </div>
+        <p id="learning-conversion-insight" class="join-note muted"></p>
+        <div id="chart-learning-conversion" class="chart-host"></div>
       </article>
       <article class="panel" style="margin-top:16px">
         <div class="panel-head">
@@ -191,10 +202,17 @@
         </label>
         <button type="button" class="btn" id="export-partners">Export CSV</button>
       </div>
-      <article class="panel">
+      <article class="panel" style="margin-bottom:16px">
         <div class="panel-head">
           <div>
-            <h2>Partner scorecard</h2>
+            <h2>SC efficiency over time</h2>
+            <p>SC hours per closed won deal by quarter — green = lighter touch, red = heavier reliance</p>
+          </div>
+        </div>
+        <p id="heatmap-footnote" class="join-note muted" style="margin:0 16px 8px"></p>
+        <div id="partner-efficiency-heatmap" class="heat-wrap"></div>
+      </article>
+      <article class="panel">
             <p>SC effort, pipeline volume, and conversion in one view</p>
           </div>
         </div>
@@ -231,6 +249,7 @@
       <div class="subtabs" id="detail-subtabs">
         <button type="button" class="subtab active" data-sub="pipeline">Pipeline</button>
         <button type="button" class="subtab" data-sub="sc">SC effort</button>
+        <button type="button" class="subtab" data-sub="trends">Trends</button>
         <button type="button" class="subtab" data-sub="learning">Learning</button>
       </div>
       <div id="detail-panels"></div>
@@ -261,6 +280,22 @@
             </div>
             <input id="domain-map-input" type="file" accept=".csv,.xlsx,.xls" hidden>
           </div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Export date coverage</h2>
+              <p>What time periods your loaded files actually cover</p>
+            </div>
+          </div>
+          <p id="coverage-summary" class="join-note muted"></p>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Source</th><th>Type</th><th>Rows</th><th>Date range</th></tr></thead>
+              <tbody id="coverage-files-body"></tbody>
+            </table>
+          </div>
+          <ul id="coverage-warnings" class="coverage-warnings"></ul>
         </article>
         <article class="panel">
           <div class="panel-head">

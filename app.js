@@ -176,6 +176,394 @@
     return '#b42318';
   }
 
+  function pearsonCorrelation(xs, ys) {
+    const n = xs.length;
+    if (n < 3) return null;
+    const mx = xs.reduce((a, b) => a + b, 0) / n;
+    const my = ys.reduce((a, b) => a + b, 0) / n;
+    let num = 0;
+    let dx = 0;
+    let dy = 0;
+    for (let i = 0; i < n; i += 1) {
+      const a = xs[i] - mx;
+      const b = ys[i] - my;
+      num += a * b;
+      dx += a * a;
+      dy += b * b;
+    }
+    if (!dx || !dy) return null;
+    return num / Math.sqrt(dx * dy);
+  }
+
+  function medianValue(nums) {
+    const vals = nums.filter((n) => n !== null && n !== undefined && Number.isFinite(n)).sort((a, b) => a - b);
+    if (!vals.length) return null;
+    const mid = Math.floor(vals.length / 2);
+    return vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+  }
+
+  function avgWinRate(list) {
+    const vals = list.map((p) => p.winRate).filter((v) => v !== null);
+    if (!vals.length) return null;
+    return vals.reduce((s, v) => s + v, 0) / vals.length;
+  }
+
+  function learningConversionCohort(partners) {
+    return partners.filter((p) => p.closedCount >= 5 && p.winRate !== null && p.learningSeconds > 0 && p.learnerCount > 0);
+  }
+
+  function learningConversionAnalysis(partners) {
+    const cohort = learningConversionCohort(partners);
+    const closed = partners.filter((p) => p.closedCount >= 5 && p.winRate !== null && !isNonPartner(p.partnerGroup));
+    const without = closed.filter((p) => !p.learningSeconds);
+    const x = cohort.map((p) => p.learningHoursPerLearner || (p.learningSeconds / 3600 / p.learnerCount));
+    const y = cohort.map((p) => p.winRate);
+    const totalLearning = (PD.state.model.learningRows || []).reduce((s, r) => s + (r.learningSeconds || 0), 0);
+    const unmappedLearning = (PD.state.model.learningRows || [])
+      .filter((r) => r.partnerGroup === 'Unmapped learning partner')
+      .reduce((s, r) => s + (r.learningSeconds || 0), 0);
+    return {
+      cohort,
+      cohortSize: cohort.length,
+      withLearningWin: avgWinRate(cohort),
+      withoutLearningWin: avgWinRate(without),
+      withoutCount: without.length,
+      correlation: pearsonCorrelation(x, y),
+      unmappedShare: totalLearning ? unmappedLearning / totalLearning : null
+    };
+  }
+
+  function learningConversionInsightText(analysis) {
+    if (!analysis.cohortSize) {
+      return 'Need partners with mapped learning, at least 5 closed deals, and learners in scope. Improve domain mapping in Admin, then reload.';
+    }
+    const r = analysis.correlation;
+    const rText = r === null ? 'too few partners to compute' : (r >= 0 ? '+' : '') + r.toFixed(2);
+    let strength = 'no meaningful linear relationship';
+    if (r !== null) {
+      const abs = Math.abs(r);
+      if (abs >= 0.4) strength = r > 0 ? 'moderate positive association' : 'moderate negative association';
+      else if (abs >= 0.2) strength = r > 0 ? 'weak positive association' : 'weak negative association';
+    }
+    const withPct = analysis.withLearningWin !== null ? PD.formatPercent(analysis.withLearningWin) : '–';
+    const withoutPct = analysis.withoutLearningWin !== null ? PD.formatPercent(analysis.withoutLearningWin) : '–';
+    const mapNote = analysis.unmappedShare !== null && analysis.unmappedShare > 0.15
+      ? ` ${PD.formatPercent(analysis.unmappedShare)} of learning hours are still unmapped — improve domain mapping before drawing firm conclusions.`
+      : '';
+    return `<strong>${PD.formatInt(analysis.cohortSize)} partners</strong> with mapped learning and ≥5 closed deals. `
+      + `Average win rate: ${withPct} (with learning) vs ${withoutPct} (${PD.formatInt(analysis.withoutCount)} partners without mapped learning). `
+      + `Correlation (learning hrs/learner vs win rate): r = ${rText} — ${strength}.${mapNote} `
+      + `This shows association, not causation — partners who need more SC help may also log more learning.`;
+  }
+
+  function learningConversionScatterSvg(rows) {
+    if (!rows.length) return emptyChart('Need partners with mapped learning and at least 5 closed deals.');
+    const width = 980;
+    const height = 380;
+    const pad = { left: 70, right: 40, top: 30, bottom: 60 };
+    const plotW = width - pad.left - pad.right;
+    const plotH = height - pad.top - pad.bottom;
+    const maxX = Math.max(...rows.map((p) => p.learningHoursPerLearner || 0), 0.5);
+    const maxClosed = Math.max(...rows.map((p) => p.closedCount), 1);
+    const x = (v) => pad.left + (v / maxX) * plotW;
+    const y = (v) => pad.top + plotH - v * plotH;
+    const r = (v) => 6 + (v / maxClosed) * 18;
+    const gridX = [0, 0.25, 0.5, 0.75, 1].map((p) => `<g><line x1="${x(maxX * p)}" y1="${pad.top}" x2="${x(maxX * p)}" y2="${pad.top + plotH}" class="scatter-grid"></line><text x="${x(maxX * p)}" y="${height - 24}" text-anchor="middle" class="chart-meta">${(maxX * p).toFixed(1)}h</text></g>`).join('');
+    const gridY = [0, 0.25, 0.5, 0.75, 1].map((p) => `<g><line x1="${pad.left}" y1="${y(p)}" x2="${pad.left + plotW}" y2="${y(p)}" class="scatter-grid"></line><text x="${pad.left - 10}" y="${y(p) + 4}" text-anchor="end" class="chart-meta">${Math.round(p * 100)}%</text></g>`).join('');
+    const medX = medianValue(rows.map((p) => p.learningHoursPerLearner || 0));
+    const medY = medianValue(rows.map((p) => p.winRate));
+    const midLines = (medX !== null && medY !== null)
+      ? `<line x1="${x(medX)}" y1="${pad.top}" x2="${x(medX)}" y2="${pad.top + plotH}" class="scatter-mid"></line><line x1="${pad.left}" y1="${y(medY)}" x2="${pad.left + plotW}" y2="${y(medY)}" class="scatter-mid"></line>`
+      : '';
+    const top = PD.sortRows(rows, { key: 'learningSeconds', dir: 'desc' }).slice(0, 8);
+    const points = rows.map((p) => {
+      const hrs = p.learningHoursPerLearner || 0;
+      return `<circle cx="${x(hrs)}" cy="${y(p.winRate)}" r="${r(p.closedCount)}" fill="${winRateColor(p.winRate)}" fill-opacity="0.72" stroke="#fff" stroke-width="1.5"></circle>`;
+    }).join('');
+    const labels = top.map((p) => `<text x="${x(p.learningHoursPerLearner || 0) + 8}" y="${y(p.winRate) - 6}" class="chart-meta">${PD.escapeHtml(p.partnerGroup.length > 22 ? `${p.partnerGroup.slice(0, 20)}…` : p.partnerGroup)}</text>`).join('');
+    return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Learning hours per learner versus win rate">${gridX}${gridY}${midLines}<line x1="${pad.left}" y1="${pad.top + plotH}" x2="${pad.left + plotW}" y2="${pad.top + plotH}" class="scatter-axis"></line><line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top + plotH}" class="scatter-axis"></line>${points}${labels}<text x="${pad.left + plotW / 2}" y="${height - 6}" text-anchor="middle" class="axis-label">Learning hours per learner</text><text x="18" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(-90 18 ${pad.top + plotH / 2})">Closed win rate</text></svg>`;
+  }
+
+  function renderStatus() {
+    const m = PD.state.model;
+    const pill = $('#status-pill');
+    if (!hasData()) {
+      pill.textContent = 'No data loaded';
+      return;
+    }
+    const stats = m.baseStats || {};
+    const cov = m.dataCoverage;
+    const taskSpan = cov?.tasks?.label && cov.tasks.label !== '–' ? ` · tasks ${cov.tasks.label}` : '';
+    pill.textContent = `${stats.opportunitiesImported || m.opportunities.length} opps · ${stats.tasksImported || m.tasks.length} tasks${taskSpan}`;
+  }
+
+  function renderDataCoverage() {
+    const cov = PD.getDataCoverage ? PD.getDataCoverage() : null;
+    const banner = $('#data-coverage-banner');
+    const summary = $('#coverage-summary');
+    const filesBody = $('#coverage-files-body');
+    const warningsHost = $('#coverage-warnings');
+    if (!cov || !banner) {
+      if (banner) banner.classList.add('hidden');
+      return;
+    }
+
+    const warnCount = (cov.warnings || []).filter((w) => w.level === 'warn').length;
+    banner.classList.remove('hidden');
+    banner.classList.toggle('warn', warnCount > 0);
+    banner.innerHTML = `
+      <strong>Data periods in this session</strong>
+      <dl class="coverage-grid">
+        <div><dt>SC task hours</dt><dd>${PD.escapeHtml(cov.tasks.label)}</dd></div>
+        <div><dt>Opportunity close dates</dt><dd>${PD.escapeHtml(cov.opportunities.closeLabel)}</dd></div>
+        <div><dt>Opportunity created</dt><dd>${PD.escapeHtml(cov.opportunities.createdLabel)}</dd></div>
+        <div><dt>Learning years</dt><dd>${PD.escapeHtml(cov.learning.label)}</dd></div>
+        <div><dt>Task–opp match</dt><dd>${cov.taskJoinMatchRate !== null ? PD.formatPercent(cov.taskJoinMatchRate) : '–'}</dd></div>
+      </dl>
+    `;
+
+    if (summary) {
+      summary.innerHTML = `<strong>${PD.formatInt(cov.opportunities.count)}</strong> opportunities (${PD.formatInt(cov.opportunities.openCount)} open · ${PD.formatInt(cov.opportunities.closedCount)} closed) · `
+        + `<strong>${PD.formatInt(cov.tasks.count)}</strong> tasks · `
+        + (cov.learning.count ? `<strong>${PD.formatInt(cov.learning.count)}</strong> learning rows` : 'no learning file');
+    }
+
+    if (filesBody) {
+      filesBody.innerHTML = (cov.fileSummaries || []).length
+        ? cov.fileSummaries.map((file) => {
+          let range = '–';
+          if (file.kind === 'Tasks') range = coverageRangeLabel(file.taskRange);
+          else if (file.kind === 'Opportunities') range = `Close ${coverageRangeLabel(file.closeRange)} · Created ${coverageRangeLabel(file.createdRange)}`;
+          else if (file.kind === 'Learning') range = `Years ${Object.keys(file.learningYears).sort().join(', ') || '–'}`;
+          const rows = file.taskRows || file.oppRows || file.learningRows;
+          return `<tr><td>${PD.escapeHtml(file.fileName)}</td><td>${PD.escapeHtml(file.kind)}</td><td>${PD.formatInt(rows)}</td><td>${PD.escapeHtml(range)}</td></tr>`;
+        }).join('')
+        : '<tr><td colspan="4" class="muted">Load exports to see per-file coverage.</td></tr>';
+    }
+
+    if (warningsHost) {
+      warningsHost.innerHTML = (cov.warnings || []).length
+        ? cov.warnings.map((w) => `<li class="${w.level === 'warn' ? 'warn' : ''}">${PD.escapeHtml(w.text)}</li>`).join('')
+        : '<li>Task, opportunity, and learning periods look aligned — still confirm Salesforce report filters match.</li>';
+    }
+  }
+
+  function coverageRangeLabel(range) {
+    if (!range?.min || !range?.max) return '–';
+    if (range.min.getTime() === range.max.getTime()) return PD.formatShortDate(range.min);
+    return `${PD.formatShortDate(range.min)} – ${PD.formatShortDate(range.max)}`;
+  }
+
+  function partnerQuarterKey(date) {
+    const safe = date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+    if (!safe) return null;
+    const year = safe.getFullYear();
+    if (year < 2000 || year > 2035) return null;
+    return `${year}-Q${Math.floor(safe.getMonth() / 3) + 1}`;
+  }
+
+  function buildPartnerTrend(partnerKey, opps, tasks, aliases) {
+    const oppKeys = new Set(opps.map((o) => o.opportunityKey));
+    const buckets = new Map();
+    const ensure = (key) => {
+      if (!buckets.has(key)) buckets.set(key, { key, scHours: 0, closed: 0, won: 0, lost: 0 });
+      return buckets.get(key);
+    };
+    for (const task of tasks) {
+      const mappedKey = aliases[task.opportunityKey] || task.opportunityKey;
+      if (!oppKeys.has(mappedKey)) continue;
+      const quarter = partnerQuarterKey(task.taskDate);
+      if (!quarter) continue;
+      ensure(quarter).scHours += task.hours || 0;
+    }
+    for (const opp of opps) {
+      if (opp.outcome !== 'Won' && opp.outcome !== 'Lost') continue;
+      const quarter = partnerQuarterKey(opp.closeDate);
+      if (!quarter) continue;
+      const bucket = ensure(quarter);
+      bucket.closed += 1;
+      if (opp.outcome === 'Won') bucket.won += 1;
+      if (opp.outcome === 'Lost') bucket.lost += 1;
+    }
+    return [...buckets.values()]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map((row) => ({ ...row, winRate: row.closed ? row.won / row.closed : null }));
+  }
+
+  function partnerTrendInsight(rows) {
+    if (!rows.length) return 'Need dated tasks or closed opportunities for this partner in the current filter.';
+    const withClosed = rows.filter((r) => r.closed >= 2);
+    const scSeries = rows.filter((r) => r.scHours > 0);
+    if (scSeries.length >= 4) {
+      const mid = Math.floor(scSeries.length / 2);
+      const early = scSeries.slice(0, mid).reduce((s, r) => s + r.scHours, 0) / Math.max(1, mid);
+      const late = scSeries.slice(mid).reduce((s, r) => s + r.scHours, 0) / Math.max(1, scSeries.length - mid);
+      const scTrend = late > early * 1.15 ? 'increasing' : late < early * 0.85 ? 'decreasing' : 'steady';
+      let winTrend = '';
+      if (withClosed.length >= 2) {
+        const midC = Math.floor(withClosed.length / 2);
+        const earlyWr = withClosed.slice(0, midC).reduce((s, r) => s + (r.winRate || 0), 0) / Math.max(1, midC);
+        const lateWr = withClosed.slice(midC).reduce((s, r) => s + (r.winRate || 0), 0) / Math.max(1, withClosed.length - midC);
+        winTrend = lateWr > earlyWr + 0.05 ? ' Win rate trended up in later quarters.' : lateWr < earlyWr - 0.05 ? ' Win rate trended down in later quarters.' : ' Win rate was relatively stable across quarters with closes.';
+      }
+      return `SC hours per active quarter are ${scTrend} (early avg ${PD.formatHours(early)} → recent avg ${PD.formatHours(late)}).${winTrend} Compare bars (effort) with the win-rate line (outcomes) — rising SC with falling win rate may signal reliance; falling SC with stable wins may signal maturity.`;
+    }
+    return 'Limited quarters with data — widen filters or load a longer task export for clearer trends.';
+  }
+
+  function partnerTrendSvg(rows) {
+    const series = rows.filter((r) => r.scHours > 0 || r.closed > 0);
+    if (!series.length) return emptyChart('No quarterly SC hours or closed deals for this partner in the current filter.');
+    const width = 980;
+    const height = 360;
+    const pad = { left: 64, right: 56, top: 28, bottom: 72 };
+    const plotW = width - pad.left - pad.right;
+    const plotH = height - pad.top - pad.bottom;
+    const maxHours = Math.max(...series.map((r) => r.scHours), 1);
+    const barW = Math.min(42, plotW / Math.max(series.length, 1) - 8);
+    const step = plotW / series.length;
+    const bars = series.map((row, i) => {
+      const x = pad.left + i * step + (step - barW) / 2;
+      const h = (row.scHours / maxHours) * plotH;
+      const y = pad.top + plotH - h;
+      return `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(1, h)}" rx="4" fill="#2563eb" fill-opacity="0.82"></rect>`;
+    }).join('');
+    const winPoints = series
+      .map((row, i) => (row.winRate !== null ? { x: pad.left + i * step + step / 2, y: pad.top + plotH - row.winRate * plotH, rate: row.winRate } : null))
+      .filter(Boolean);
+    const winPath = winPoints.length
+      ? `<polyline points="${winPoints.map((p) => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="#0d7a55" stroke-width="2.5"></polyline>`
+        + winPoints.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="4.5" fill="#0d7a55"></circle>`).join('')
+      : '';
+    const xLabels = series.map((row, i) => {
+      const x = pad.left + i * step + step / 2;
+      return `<text x="${x}" y="${height - 44}" text-anchor="middle" class="chart-meta">${PD.escapeHtml(row.key)}</text>`;
+    }).join('');
+    const yHours = [0, 0.5, 1].map((p) => {
+      const y = pad.top + plotH - p * plotH;
+      return `<g><line x1="${pad.left}" y1="${y}" x2="${pad.left + plotW}" y2="${y}" class="scatter-grid"></line><text x="${pad.left - 8}" y="${y + 4}" text-anchor="end" class="chart-meta">${PD.escapeHtml(PD.formatHours(maxHours * p))}</text></g>`;
+    }).join('');
+    const yWin = [0, 0.5, 1].map((p) => `<text x="${width - pad.right + 8}" y="${pad.top + plotH - p * plotH + 4}" class="chart-meta">${Math.round(p * 100)}%</text>`).join('');
+    return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Partner SC hours and win rate by quarter">${yHours}${yWin}${bars}${winPath}${xLabels}<line x1="${pad.left}" y1="${pad.top + plotH}" x2="${pad.left + plotW}" y2="${pad.top + plotH}" class="scatter-axis"></line><text x="${pad.left + plotW / 2}" y="${height - 8}" text-anchor="middle" class="axis-label">Calendar quarter</text><text x="18" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(-90 18 ${pad.top + plotH / 2})">SC hours</text><text x="${width - 18}" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(90 ${width - 18} ${pad.top + plotH / 2})">Win rate</text></svg>`;
+  }
+
+  function scTrackingFootnote() {
+    const cov = PD.getDataCoverage ? PD.getDataCoverage() : null;
+    const start = cov?.tasks?.range?.min;
+    if (!start) return 'SC task dates are required for trend and heatmap views.';
+    const end = cov?.tasks?.range?.max;
+    const span = end ? ` (${coverageRangeLabel(cov.tasks.range)})` : '';
+    return `SC task logging in this export starts ${PD.formatShortDate(start)}${span}. Older closed deals may show wins without logged SC hours — that is missing data, not zero support. Campaign and initiative time is excluded from opp-aligned quarters.`;
+  }
+
+  function quarterLabelShort(key) {
+    const m = /^(\d{4})-Q(\d)$/.exec(key || '');
+    if (!m) return key || '–';
+    return `Q${m[2]} '${m[1].slice(2)}`;
+  }
+
+  function globalTaskQuarters() {
+    const cov = PD.getDataCoverage ? PD.getDataCoverage() : null;
+    const min = cov?.tasks?.range?.min;
+    const max = cov?.tasks?.range?.max;
+    if (!min || !max) return [];
+    const quarters = [];
+    const cursor = new Date(min.getFullYear(), Math.floor(min.getMonth() / 3) * 3, 1);
+    const end = max.getTime();
+    while (cursor.getTime() <= end) {
+      const key = partnerQuarterKey(cursor);
+      if (key && !quarters.includes(key)) quarters.push(key);
+      cursor.setMonth(cursor.getMonth() + 3);
+    }
+    return quarters.sort();
+  }
+
+  function efficiencyHeatClass(hoursPerWon, scHours, won, thresholds) {
+    if (scHours > 0 && won === 0) return 'heat-pending';
+    if (scHours <= 0 && won <= 0) return 'heat-empty';
+    if (won > 0 && (hoursPerWon === null || hoursPerWon === undefined)) return 'heat-mid';
+    if (hoursPerWon <= thresholds.low) return 'heat-good';
+    if (hoursPerWon <= thresholds.high) return 'heat-mid';
+    return 'heat-bad';
+  }
+
+  function buildEfficiencyHeatmap(partners, joined, limit = 24) {
+    const aliases = PD.state.model.taskKeyAliases || {};
+    const tasks = PD.state.model.tasks || [];
+    const quarters = globalTaskQuarters();
+    if (!quarters.length) return { quarters: [], rows: [], thresholds: { low: 20, high: 60 } };
+
+    const pool = PD.sortRows(partners.filter((p) => p.totalHours > 0), { key: 'totalHours', dir: 'desc' }).slice(0, limit);
+    const values = [];
+    const rows = pool.map((partner) => {
+      const opps = joined.filter((row) => row.partnerKey === partner.partnerKey);
+      const trend = buildPartnerTrend(partner.partnerKey, opps, tasks, aliases);
+      const byQuarter = Object.fromEntries(trend.map((row) => [row.key, row]));
+      const cells = quarters.map((quarter) => {
+        const bucket = byQuarter[quarter] || { scHours: 0, won: 0, closed: 0 };
+        const hoursPerWon = bucket.won > 0 ? bucket.scHours / bucket.won : null;
+        if (hoursPerWon !== null && hoursPerWon >= 0) values.push(hoursPerWon);
+        return {
+          quarter,
+          scHours: bucket.scHours,
+          won: bucket.won,
+          closed: bucket.closed,
+          hoursPerWon
+        };
+      });
+      return { partner, cells };
+    });
+
+    const sorted = values.filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+    const thresholds = sorted.length
+      ? {
+        low: sorted[Math.floor(sorted.length / 3)] || sorted[0],
+        high: sorted[Math.floor((sorted.length * 2) / 3)] || sorted[sorted.length - 1]
+      }
+      : { low: 20, high: 60 };
+    return { quarters, rows, thresholds };
+  }
+
+  function renderEfficiencyHeatmap(partners, joined) {
+    const host = $('#partner-efficiency-heatmap');
+    const note = $('#heatmap-footnote');
+    if (!host) return;
+    if (note) note.textContent = scTrackingFootnote();
+
+    const data = buildEfficiencyHeatmap(partners, joined);
+    if (!data.rows.length || !data.quarters.length) {
+      host.innerHTML = '<p class="muted">Need dated SC tasks and partners with logged hours in the current filter.</p>';
+      return;
+    }
+
+    const header = `<tr><th class="heat-sticky">Partner</th>${data.quarters.map((q) => `<th>${PD.escapeHtml(quarterLabelShort(q))}</th>`).join('')}</tr>`;
+    const body = data.rows.map(({ partner, cells }) => {
+      const tds = cells.map((cell) => {
+        const cls = efficiencyHeatClass(cell.hoursPerWon, cell.scHours, cell.won, data.thresholds);
+        let label = '–';
+        if (cls === 'heat-pending') label = `${PD.formatHours(cell.scHours)}†`;
+        else if (cell.won > 0) label = formatEfficiencyHours(cell.hoursPerWon);
+        const title = `${cell.scHours ? PD.formatHours(cell.scHours) + ' SC' : 'No SC'} · ${cell.won} won · ${cell.closed} closed`;
+        return `<td class="heat-cell ${cls}" title="${PD.escapeHtml(title)}">${label}</td>`;
+      }).join('');
+      return `<tr class="heat-row clickable" data-partner-key="${PD.escapeHtml(partner.partnerKey)}"><td class="heat-sticky"><strong>${PD.escapeHtml(partner.partnerGroup.length > 28 ? `${partner.partnerGroup.slice(0, 26)}…` : partner.partnerGroup)}</strong></td>${tds}</tr>`;
+    }).join('');
+
+    host.innerHTML = `
+      <table class="heat-table">
+        <thead>${header}</thead>
+        <tbody>${body}</tbody>
+      </table>
+      <div class="heat-legend">
+        <span class="heat-good">Low SC hrs / won (≤${formatEfficiencyHours(data.thresholds.low)})</span>
+        <span class="heat-mid">Medium</span>
+        <span class="heat-bad">High reliance</span>
+        <span class="heat-pending">SC logged, no wins (†)</span>
+        <span class="heat-empty">No activity</span>
+      </div>
+    `;
+  }
+
   function effectivenessBubbleSvg(partners) {
     const pool = partners.filter((p) => p.opportunityCount > 0 && (p.totalHours > 0 || p.closedCount > 0));
     const rows = PD.sortRows(pool, { key: 'totalHours', dir: 'desc' }).slice(0, 40);
@@ -342,6 +730,8 @@
 
   function renderEmpty() {
     renderStatus();
+    const banner = $('#data-coverage-banner');
+    if (banner) banner.classList.add('hidden');
     setPage(ui.page === 'admin' ? 'admin' : 'empty');
   }
 
@@ -375,7 +765,9 @@
       ${hasLearningData() ? `<article class="kpi"><p class="label">Partner learning</p><p class="value">${PD.formatDuration(d.kpis.learningSeconds)}</p><p class="sub">${PD.formatInt(d.kpis.engagedLearners)} engaged learners in filter</p></article>` : ''}
       <article class="kpi"><p class="label">Active partners</p><p class="value">${PD.formatInt(partners.length)}</p><p class="sub">${PD.formatInt(withHours.length)} with SC hours</p></article>
     `;
-    $('#overview-note').textContent = d.taskHoursTotal ? `${PD.formatPercent(d.taskHoursMatched / d.taskHoursTotal)} of task hours matched to opps` : '';
+    $('#overview-note').textContent = d.taskHoursTotal
+      ? `${PD.formatPercent(d.taskHoursMatched / d.taskHoursTotal)} of task hours matched to opps`
+      : '';
   }
 
   function renderCharts(d, partners, renderGen) {
@@ -455,6 +847,20 @@
         host.innerHTML = items.length
           ? barSvg(items, 'Top partners by learning time')
           : emptyChart('Learning rows loaded but none mapped to partners in this filter.');
+      },
+      () => {
+        if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
+        const panel = $('#learning-conversion-panel');
+        const host = $('#chart-learning-conversion');
+        const insight = $('#learning-conversion-insight');
+        if (!hasLearningData() || !panel || !host) return;
+        panel.classList.remove('hidden');
+        const analysis = learningConversionAnalysis(partners);
+        if (insight) {
+          insight.className = 'join-note';
+          insight.innerHTML = learningConversionInsightText(analysis);
+        }
+        host.innerHTML = learningConversionScatterSvg(analysis.cohort);
       }
     ];
     let step = 0;
@@ -535,6 +941,8 @@
   }
 
   function renderScorecard(partners, medians, renderGen) {
+    const d = derived();
+    renderEfficiencyHeatmap(partners, d.joined);
     const sorted = PD.sortRows(partners, partnerSortState());
     const body = $('#scorecard-body');
     if (!sorted.length) {
@@ -577,6 +985,13 @@
     const activities = PD.sortRows(PD.summarizeActivities(
       (PD.state.model.tasks || []).filter((t) => oppKeySet.has(aliases[t.opportunityKey] || t.opportunityKey))
     ), { key: 'totalHours', dir: 'desc' });
+    const trendRows = buildPartnerTrend(
+      key,
+      opps,
+      PD.state.model.tasks || [],
+      aliases
+    );
+    const trendInsight = partnerTrendInsight(trendRows);
 
     $('#detail-hero').innerHTML = `
       <h2>${PD.escapeHtml(partner.partnerGroup)} ${bandHtml(band)}</h2>
@@ -640,6 +1055,13 @@
           <div class="table-scroll"><table><thead><tr><th>Activity type</th><th>SC hours</th><th>Tasks</th></tr></thead><tbody>${activityRows}</tbody></table></div>
         </div>
       </article>
+      <article class="panel ${ui.detailSub === 'trends' ? '' : 'hidden'}" data-sub-panel="trends">
+        <div class="panel-head"><div><h2>SC effort vs outcomes over time</h2><p>Quarterly SC hours (bars) and closed win rate (line) — uses task dates and opportunity close dates</p></div></div>
+        <p class="join-note muted" style="margin:0 16px 8px">${PD.escapeHtml(scTrackingFootnote())}</p>
+        <p class="join-note muted" style="margin:0 16px 8px">${PD.escapeHtml(trendInsight)}</p>
+        <div class="trend-legend"><span class="sc">SC hours</span><span class="win">Win rate (closed deals)</span></div>
+        <div id="chart-partner-trend" class="chart-host">${partnerTrendSvg(trendRows)}</div>
+      </article>
       <article class="panel ${ui.detailSub === 'learning' ? '' : 'hidden'}" data-sub-panel="learning">
         <div class="panel-head"><div><h2>Learning activity</h2><p>Genie/Seismic courses mapped via learner email domain</p></div></div>
         <div class="table-scroll"><table><thead><tr><th>Course</th><th>Learning time</th><th>Learners</th></tr></thead><tbody>${courseRows}</tbody></table></div>
@@ -655,6 +1077,10 @@
 
     $('#quality-body').innerHTML = hasData() ? `
       <tr><td>Files loaded</td><td><strong>${PD.formatInt((m.files || []).length)}</strong></td></tr>
+      <tr><td>SC task period</td><td>${PD.escapeHtml(m.dataCoverage?.tasks?.label || '–')}</td></tr>
+      <tr><td>Opportunity close dates</td><td>${PD.escapeHtml(m.dataCoverage?.opportunities?.closeLabel || '–')}</td></tr>
+      <tr><td>Opportunity created</td><td>${PD.escapeHtml(m.dataCoverage?.opportunities?.createdLabel || '–')}</td></tr>
+      <tr><td>Learning years</td><td>${PD.escapeHtml(m.dataCoverage?.learning?.label || '–')}</td></tr>
       <tr><td>Opportunities</td><td>${PD.formatInt(m.baseStats.opportunitiesImported || m.opportunities.length)}</td></tr>
       <tr><td>Tasks (deduped)</td><td>${PD.formatInt(m.tasks.length)}</td></tr>
       <tr><td>L3 regions in export</td><td>${PD.formatInt(regions)}</td></tr>
@@ -730,8 +1156,17 @@
       : '<tr><td colspan="2" class="muted">None — all pipeline task names appear in opp export.</td></tr>';
 
     $('#loaded-files').innerHTML = (m.files || []).length
-      ? m.files.map((f) => `<li><strong>${PD.escapeHtml(f.fileName)}</strong><br><span class="muted">${PD.formatInt(f.taskRows)} tasks · ${PD.formatInt(f.oppRows + (f.mappedRows || 0))} opps</span></li>`).join('')
+      ? m.files.map((f) => {
+        const parts = [];
+        if (f.taskRows) parts.push(`${PD.formatInt(f.taskRows)} tasks`);
+        if (f.oppRows) parts.push(`${PD.formatInt(f.oppRows)} opps`);
+        if (f.learningRows) parts.push(`${PD.formatInt(f.learningRows)} learning rows`);
+        if (f.partnerMapRows) parts.push(`${PD.formatInt(f.partnerMapRows)} domain maps`);
+        return `<li><strong>${PD.escapeHtml(f.fileName)}</strong><br><span class="muted">${parts.join(' · ') || 'recognized'}</span></li>`;
+      }).join('')
       : '<li class="muted">No files loaded yet.</li>';
+
+    renderDataCoverage();
   }
 
   let renderQueued = false;
@@ -780,6 +1215,7 @@
     const partners = filterPartners(d.partnerSummary);
     const medians = computeMedians(partners);
     const watch = getWatchlistPartners(d);
+    renderDataCoverage();
 
     if (ui.page === 'overview') {
       renderKpis(d, partners);
@@ -788,6 +1224,8 @@
       renderFootnote(d);
       const learningPanel = $('#learning-overview-panel');
       if (learningPanel && !hasLearningData()) learningPanel.classList.add('hidden');
+      const conversionPanel = $('#learning-conversion-panel');
+      if (conversionPanel && !hasLearningData()) conversionPanel.classList.add('hidden');
       requestAnimationFrame(() => {
         if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
         renderCharts(d, partners, renderGen);
