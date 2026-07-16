@@ -582,7 +582,11 @@
     const gridX = [0, 0.25, 0.5, 0.75, 1].map((p) => `<g><line x1="${x(maxX * p)}" y1="${pad.top}" x2="${x(maxX * p)}" y2="${pad.top + plotH}" class="scatter-grid"></line><text x="${x(maxX * p)}" y="${height - 24}" text-anchor="middle" class="chart-meta">${Math.round(maxX * p)}</text></g>`).join('');
     const gridY = [0, 0.25, 0.5, 0.75, 1].map((p) => `<g><line x1="${pad.left}" y1="${y(maxY * p)}" x2="${pad.left + plotW}" y2="${y(maxY * p)}" class="scatter-grid"></line><text x="${pad.left - 10}" y="${y(maxY * p) + 4}" text-anchor="end" class="chart-meta">${PD.formatHours(maxY * p)}</text></g>`).join('');
     const top = PD.sortRows(rows, { key: 'totalHours', dir: 'desc' }).slice(0, 10);
-    const points = rows.map((p) => `<circle cx="${x(p.opportunityCount)}" cy="${y(p.totalHours)}" r="${r(p.oppsWithHours)}" fill="${winRateColor(p.winRate)}" fill-opacity="0.72" stroke="#fff" stroke-width="1.5" class="scatter-point"></circle>`).join('');
+    const points = rows.map((p) => {
+      const win = p.winRate !== null ? PD.formatPercent(p.winRate) : '–';
+      const tip = `${p.partnerGroup} — ${PD.formatInt(p.opportunityCount)} opps, ${PD.formatHours(p.totalHours)} SC, ${win} win rate`;
+      return `<circle cx="${x(p.opportunityCount)}" cy="${y(p.totalHours)}" r="${r(p.oppsWithHours)}" fill="${winRateColor(p.winRate)}" fill-opacity="0.72" stroke="#fff" stroke-width="1.5" class="scatter-point"><title>${PD.escapeHtml(tip)}</title></circle>`;
+    }).join('');
     const labels = top.map((p) => `<text x="${x(p.opportunityCount) + 8}" y="${y(p.totalHours) - 6}" class="chart-meta">${PD.escapeHtml(p.partnerGroup.length > 22 ? `${p.partnerGroup.slice(0, 20)}…` : p.partnerGroup)}</text>`).join('');
     const legend = `<g transform="translate(${pad.left + plotW - 160} ${pad.top})"><text class="chart-meta">Win rate</text><circle cx="8" cy="22" r="6" fill="#0d7a55"/><text x="20" y="26" class="chart-meta">≥35%</text><circle cx="8" cy="42" r="6" fill="#2563eb"/><text x="20" y="46" class="chart-meta">22–35%</text><circle cx="8" cy="62" r="6" fill="#b45309"/><text x="20" y="66" class="chart-meta">15–22%</text><circle cx="8" cy="82" r="6" fill="#b42318"/><text x="20" y="86" class="chart-meta">&lt;15%</text></g>`;
     const note = pool.length > rows.length ? `<text x="${pad.left}" y="16" class="chart-meta">Top ${rows.length} partners by SC hours (${pool.length} with data in filter)</text>` : '';
