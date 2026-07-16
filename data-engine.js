@@ -199,9 +199,52 @@
     { label: 'IP Integration Limited', keys: ['ip integration limited', 'ip integration'] },
     { label: 'Kerv Experience Limited', keys: ['kerv experience limited', 'kerv', 'kerv group'] },
     { label: 'Maintel Europe Limited', keys: ['maintel europe limited', 'maintel'] },
-    { label: 'Connect Managed Services (UK) Limited', keys: ['connect managed services uk limited', 'connect managed services', 'connect', 'weconnect'] },
+    { label: 'Connect Managed Services (UK) Limited', keys: ['connect managed services uk limited', 'connect managed services', 'weconnect'] },
     { label: 'Capgemini UK PLC', keys: ['capgemini uk plc', 'capgemini'] }
   ];
+
+  const BRAND_FAMILY_PREFIXES = new Set(['connect', 'smart', 'global', 'digital', 'dxc']);
+
+  function getPartnerViewMode() {
+    const mode = (typeof globalThis !== 'undefined' && globalThis.PARTNER_VIEW_MODE) || 'strict-sf';
+    return mode === 'brand-rollup' ? 'brand-rollup' : 'strict-sf';
+  }
+
+  function titleCaseWords(text) {
+    return cleanText(text).split(/\s+/).filter(Boolean).map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+  }
+
+  function brandFamilyFromName(name) {
+    const text = cleanText(name);
+    if (!text || isNonPartnerGroup(text)) return text;
+    const tokens = keyify(text).split(' ').filter((token) => token.length >= 2 && !PARTNER_NAME_STOP_WORDS.has(token));
+    if (!tokens.length) return text;
+    if (tokens.length >= 3 && tokens[0] === 'connect' && tokens[1] === 'managed') return 'Connect Managed Services';
+    if (tokens.length >= 2 && BRAND_FAMILY_PREFIXES.has(tokens[0])) return titleCaseWords(tokens.slice(0, 2).join(' '));
+    if (tokens[0] === 'smartconnect' || (tokens[0].startsWith('smartconnect') && tokens[0].length > 10)) return 'SmartConnect';
+    return titleCaseWords(tokens[0]);
+  }
+
+  function brandFamilyKey(name) {
+    return canonicalKey(brandFamilyFromName(name));
+  }
+
+  function getPartnerViewMeta() {
+    if (getPartnerViewMode() === 'brand-rollup') {
+      return {
+        mode: 'brand-rollup',
+        title: 'Brand rollup view',
+        description: 'Opportunities and SC hours are grouped by global brand family (e.g. Accenture, Capgemini). Learning from email domains rolls up to the same brand level.',
+        learningNote: 'Learning is attributed at brand level from email domains.'
+      };
+    }
+    return {
+      mode: 'strict-sf',
+      title: 'Strict Salesforce view',
+      description: 'Opportunities and SC hours use the exact Sold To / Business Partner legal entity from Salesforce. Genie learning is rolled up to brand family only — we cannot tie learners to a specific legal division.',
+      learningNote: 'Learning hours are shared across all legal entities in the same brand family. They are not tied to individual Salesforce partner records.'
+    };
+  }
 
   // Public domain hints only — not your full private mapping file.
   const DOMAIN_PARTNER_HINTS = {
@@ -229,20 +272,22 @@
   }
 
   function isChannelPartnerOpportunity(opp) {
-    const partner = normalizePartnerLabel(opp.partnerName);
+    const partner = cleanText(opp.partnerName);
     if (!partner) return false;
     const route = saleRouteKind(opp.directIndirect);
     if (route === 'direct') return false;
     if (route === 'indirect') return true;
-    const account = normalizePartnerLabel(opp.accountName);
-    return Boolean(account && partner !== account);
+    const account = cleanText(opp.accountName);
+    return Boolean(account && canonicalKey(partner) !== canonicalKey(account));
   }
 
   function partnerCatalogFromOpportunities(opportunities) {
     const names = new Set();
     for (const opp of opportunities) {
       if (!isChannelPartnerOpportunity(opp)) continue;
-      const label = normalizePartnerLabel(opp.partnerGroup || opp.partnerName);
+      const label = getPartnerViewMode() === 'brand-rollup'
+        ? brandFamilyFromName(opp.partnerGroup || opp.partnerName)
+        : cleanText(opp.partnerGroup || opp.partnerName);
       if (!label || isNonPartnerGroup(label)) continue;
       names.add(label);
     }
@@ -352,7 +397,7 @@
     const key = cleanText(domain).toLowerCase();
     if (!key || INTERNAL_LEARNING_DOMAINS.has(key)) return '';
     if (customDomainPartnerMap[key]) return customDomainPartnerMap[key];
-    if (DOMAIN_PARTNER_HINTS[key]) return normalizePartnerLabel(DOMAIN_PARTNER_HINTS[key]);
+    if (DOMAIN_PARTNER_HINTS[key]) return cleanText(DOMAIN_PARTNER_HINTS[key]);
     if (autoDomainPartnerMap[key]) return autoDomainPartnerMap[key];
     return '';
   }
@@ -367,7 +412,7 @@
     persistedDomainPartnerMap = {};
     for (const [domain, partner] of Object.entries(map || {})) {
       const d = cleanText(domain).toLowerCase();
-      const p = normalizePartnerLabel(partner);
+      const p = cleanText(partner);
       if (d && p) persistedDomainPartnerMap[d] = p;
     }
     applyPersistedDomainMaps();
@@ -385,8 +430,20 @@
     const partner = cleanText(pick(record, ['Partner Name', 'Partner', 'SFDC Partner Name', 'Sold To/Business Partner']));
     const domain = cleanText(pick(record, ['Email Domain', 'Domain', 'EMAIL_DOMAIN'])).toLowerCase();
     if (!partner || !domain) return false;
-    customDomainPartnerMap[domain] = normalizePartnerLabel(partner);
+    customDomainPartnerMap[domain] = cleanText(partner);
     return true;
+  }
+
+  function assignLearningPartner(row, partnerLabel, source, mappedLegal) {
+    const brand = brandFamilyFromName(partnerLabel);
+    const brandKey = brandFamilyKey(partnerLabel);
+    row.brandFamily = brand;
+    row.brandFamilyKey = brandKey;
+    row.mappedPartner = cleanText(mappedLegal || partnerLabel);
+    row.partnerGroup = getPartnerViewMode() === 'brand-rollup' ? brand : brand;
+    row.partnerKey = brandKey;
+    row.learningAttribution = 'brand';
+    row.mappingSource = source;
   }
 
   function remapLearningToPartners(learningRows, opportunities) {
@@ -396,47 +453,47 @@
         row.partnerGroup = 'Internal / Genesys or Seismic';
         row.partnerKey = partnerJoinKey(row.partnerGroup);
         row.mappedPartner = row.partnerGroup;
+        row.brandFamily = row.partnerGroup;
+        row.brandFamilyKey = row.partnerKey;
+        row.learningAttribution = 'internal';
         row.mappingSource = 'internal-domain';
         continue;
       }
 
-      const explicit = normalizePartnerLabel(row.mappedPartner || '');
-      if (explicit && catalog.includes(explicit)) {
-        row.partnerGroup = explicit;
-        row.partnerKey = partnerJoinKey(explicit);
-        row.mappingSource = row.mappingSource || 'learning-export';
+      const explicit = cleanText(row.mappedPartner || '');
+      if (explicit && catalog.includes(getPartnerViewMode() === 'brand-rollup' ? brandFamilyFromName(explicit) : explicit)) {
+        assignLearningPartner(row, explicit, row.mappingSource || 'learning-export', explicit);
         continue;
       }
 
       const inferred = resolvePartnerFromDomain(row.emailDomain);
       if (inferred) {
-        row.partnerGroup = inferred;
-        row.partnerKey = partnerJoinKey(inferred);
-        row.mappedPartner = inferred;
         const dk = cleanText(row.emailDomain).toLowerCase();
-        if (persistedDomainPartnerMap[dk]) row.mappingSource = 'saved-domain-map';
-        else if (customDomainPartnerMap[dk]) row.mappingSource = 'uploaded-domain-map';
-        else if (DOMAIN_PARTNER_HINTS[dk]) row.mappingSource = 'domain-hint';
-        else row.mappingSource = 'auto-domain-map';
+        let source = 'auto-domain-map';
+        if (persistedDomainPartnerMap[dk]) source = 'saved-domain-map';
+        else if (customDomainPartnerMap[dk]) source = 'uploaded-domain-map';
+        else if (DOMAIN_PARTNER_HINTS[dk]) source = 'domain-hint';
+        assignLearningPartner(row, inferred, source, inferred);
         continue;
       }
 
       row.partnerGroup = 'Unmapped learning partner';
       row.partnerKey = partnerJoinKey(row.partnerGroup);
+      row.brandFamily = row.partnerGroup;
+      row.brandFamilyKey = row.partnerKey;
+      row.learningAttribution = 'unmapped';
       row.mappingSource = 'unmapped';
     }
   }
   function normalizePartnerLabel(value) {
     const text = cleanText(value);
     if (!text) return '';
-    const key = keyify(text);
-    for (const alias of PARTNER_ALIASES) {
-      if (alias.keys.some((candidate) => key === candidate || key.includes(candidate) || candidate.includes(key))) return alias.label;
-    }
+    if (getPartnerViewMode() === 'brand-rollup') return brandFamilyFromName(text);
     return text;
   }
   function partnerJoinKey(value) {
-    return canonicalKey(normalizePartnerLabel(value));
+    if (getPartnerViewMode() === 'brand-rollup') return brandFamilyKey(value);
+    return canonicalKey(cleanText(value));
   }
 
   function pick(record, candidates) {
@@ -462,20 +519,20 @@
   }
 
   function partnerGroup(partnerName, directIndirect, accountName) {
-    const partner = normalizePartnerLabel(partnerName);
+    const partner = cleanText(partnerName);
     const route = saleRouteKind(directIndirect);
-    const account = normalizePartnerLabel(accountName);
+    const account = cleanText(accountName);
 
     if (route === 'direct') return 'Direct / No partner';
 
     if (route === 'indirect') {
-      if (partner) return partner;
+      if (partner) return getPartnerViewMode() === 'brand-rollup' ? brandFamilyFromName(partner) : partner;
       return 'Indirect / No partner named';
     }
 
     if (partner) {
-      if (account && partner === account) return 'End customer / No partner';
-      return partner;
+      if (account && canonicalKey(partner) === canonicalKey(account)) return 'End customer / No partner';
+      return getPartnerViewMode() === 'brand-rollup' ? brandFamilyFromName(partner) : partner;
     }
 
     return 'No partner named';
@@ -1090,14 +1147,16 @@
     const probability = toNumber(pick(record, ['Probability (%)', 'Probability']));
     const directIndirect = cleanText(pick(record, ['Direct/Indirect Sale', 'Direct / Indirect Sale', 'DirectIndirect', 'Direct/Indirect']));
     const rawPartnerName = cleanText(pick(record, ['Sold To/Business Partner', 'Sold To / Business Partner', 'Business Partner', 'Partner', 'Partner Name']));
-    const partnerName = normalizePartnerLabel(rawPartnerName);
+    const legalEntity = rawPartnerName;
+    const brandFamily = brandFamilyFromName(legalEntity);
+    const brandKey = brandFamilyKey(legalEntity);
     const bookingValue = toNumber(pick(record, ['Gross ACV Booking', 'Booking Value', 'Gross ACV', 'ACV Booking']));
     const totalAmount = toNumber(pick(record, ['Total Amount', 'Amount', 'Value']));
     const closeDate = parseDateValue(pick(record, ['Close Date', 'CloseDate']));
     const createdDate = parseDateValue(pick(record, ['Created Date', 'CreatedDate']));
     const stage = cleanText(pick(record, ['Stage', 'Stage Name']));
     const accountName = cleanText(pick(record, ['Account Name', 'Company / Account', 'Account']));
-    const groupedPartner = partnerGroup(partnerName, directIndirect, accountName);
+    const groupedPartner = partnerGroup(legalEntity, directIndirect, accountName);
     return {
       sourceFile: extract.fileName,
       opportunityKey: normaliseOpportunityKey(opportunityName),
@@ -1115,9 +1174,12 @@
       leadSource: cleanText(pick(record, ['Lead Source'])),
       nextStep: cleanText(pick(record, ['Next Step'])),
       directIndirect,
-      partnerName,
+      partnerName: legalEntity,
+      legalEntity,
+      brandFamily,
+      brandFamilyKey: brandKey,
       partnerGroup: groupedPartner,
-      partnerKey: partnerJoinKey(groupedPartner),
+      partnerKey: getPartnerViewMode() === 'brand-rollup' ? brandKey : canonicalKey(groupedPartner),
       region: cleanText(pick(record, ['L3 - Region', 'Region', 'Sales Region', 'Geo', 'Area'])),
       subRegion: cleanText(pick(record, ['Subregion L4', 'Sub-Region', 'Sub Region', 'Subregion', 'Territory'])),
       industrySector: cleanText(pick(record, ['Industry Sector', 'Industry'])),
@@ -1584,9 +1646,11 @@
     });
   }
   function joinOpps(opportunities, taskAgg, useSeed, learningAgg) {
+    const strictMode = getPartnerViewMode() === 'strict-sf';
     return opportunities.map((opp) => {
       const agg = taskAgg.get(opp.opportunityKey);
-      const learning = learningAgg.get(opp.partnerKey || '');
+      const learningKey = strictMode ? '' : (opp.partnerKey || '');
+      const learning = learningKey ? learningAgg.get(learningKey) : null;
       const totalHours = agg ? agg.totalHours : (useSeed ? (opp.seedHours || 0) : 0);
       const taskCount = agg ? agg.taskCount : (useSeed && opp.seedHours ? 1 : 0);
       let topActivity = '';
@@ -1619,10 +1683,28 @@
     });
   }
   function summarizePartners(rows, learningAgg) {
+    const strictMode = getPartnerViewMode() === 'strict-sf';
     const map = new Map();
     for (const row of rows) {
       const key = row.partnerKey || canonicalKey(row.partnerGroup || 'No partner named');
-      if (!map.has(key)) map.set(key, { partnerKey: key, partnerGroup: row.partnerGroup || 'No partner named', opportunityCount: 0, oppsWithHours: 0, totalHours: 0, wonCount: 0, lostCount: 0, openCount: 0, closedCount: 0, totalValue: 0, wonValue: 0 });
+      if (!map.has(key)) {
+        map.set(key, {
+          partnerKey: key,
+          partnerGroup: row.partnerGroup || 'No partner named',
+          legalEntity: row.legalEntity || row.partnerName || row.partnerGroup || 'No partner named',
+          brandFamily: row.brandFamily || brandFamilyFromName(row.partnerName || row.partnerGroup || ''),
+          brandFamilyKey: row.brandFamilyKey || brandFamilyKey(row.partnerName || row.partnerGroup || ''),
+          opportunityCount: 0,
+          oppsWithHours: 0,
+          totalHours: 0,
+          wonCount: 0,
+          lostCount: 0,
+          openCount: 0,
+          closedCount: 0,
+          totalValue: 0,
+          wonValue: 0
+        });
+      }
       const p = map.get(key);
       p.opportunityCount += 1;
       if (row.totalHours > 0) p.oppsWithHours += 1;
@@ -1635,11 +1717,18 @@
       p.totalValue += value;
       if (row.outcome === 'Won') p.wonValue += value;
     }
+    const legalEntitiesByBrand = new Map();
+    for (const p of map.values()) {
+      if (!legalEntitiesByBrand.has(p.brandFamilyKey)) legalEntitiesByBrand.set(p.brandFamilyKey, new Set());
+      legalEntitiesByBrand.get(p.brandFamilyKey).add(p.partnerKey);
+    }
     const list = Array.from(map.values()).map((p) => {
-      const learning = learningAgg.get(p.partnerKey) || { learningSeconds: 0, learnerCount: 0, engagedLearnerCount: 0, courseCount: 0, openedOnlyLearnerCount: 0, recordCount: 0 };
+      const learningKey = strictMode ? p.brandFamilyKey : p.partnerKey;
+      const learning = learningAgg.get(learningKey) || { learningSeconds: 0, learnerCount: 0, engagedLearnerCount: 0, courseCount: 0, openedOnlyLearnerCount: 0, recordCount: 0 };
       const learningSeconds = learning.learningSeconds || 0;
       const learnerCount = learning.learnerCount || 0;
       const engagedLearnerCount = learning.engagedLearnerCount || 0;
+      const sharedLegalEntities = legalEntitiesByBrand.get(p.brandFamilyKey)?.size || 1;
       return {
         ...p,
         learningSeconds,
@@ -1649,6 +1738,8 @@
         openedOnlyLearnerCount: learning.openedOnlyLearnerCount || 0,
         learningRecordCount: learning.recordCount || 0,
         learningHours: learningSeconds / 3600,
+        learningAttribution: strictMode ? 'brand' : 'brand',
+        learningSharedAcross: sharedLegalEntities,
         winRate: p.closedCount ? p.wonCount / p.closedCount : null,
         avgHoursPerOpp: p.opportunityCount ? p.totalHours / p.opportunityCount : null,
         avgHoursPerOppWithHours: p.oppsWithHours ? p.totalHours / p.oppsWithHours : null,
@@ -2333,7 +2424,10 @@
     getDomainMappingReport,
     getCustomDomainPartnerMap,
     setPersistedDomainMap,
-    formatShortDate
+    formatShortDate,
+    getPartnerViewMode,
+    getPartnerViewMeta,
+    brandFamilyFromName
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.PartnerDashboard = api;

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Partner Performance Dashboard — Choose a view</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .launch-shell {
+      max-width: 920px;
+      margin: 48px auto;
+      padding: 0 24px 48px;
+    }
+    .launch-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-top: 18px;
+    }
+    .launch-card h2 {
+      margin: 0 0 8px;
+      font-size: 1.25rem;
+    }
+    .launch-card p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+    .launch-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .launch-links a {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .launch-links a.primary {
+      background: var(--brand);
+      color: #fff;
+    }
+    .launch-links a.secondary {
+      background: var(--brand-soft);
+      color: var(--brand);
+    }
+    .launch-note {
+      margin-top: 24px;
+      padding: 16px 18px;
+      background: #fff8e6;
+      border: 1px solid #f0d48a;
+      border-radius: var(--radius);
+      color: #5c4a12;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="banner">
+    <div class="banner-top">
+      <div>
+        <p class="eyebrow">Solution Consulting · Partner effectiveness</p>
+        <h1>Partner Performance Dashboard</h1>
+        <p>Two published views of the same dashboard — pick the lens that fits your review.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="launch-shell">
+    <article class="launch-card">
+      <h2>Strict Salesforce view</h2>
+      <p>Opportunities and SC hours use the exact Sold To / Business Partner legal entity from Salesforce. Genie learning is rolled up to brand family only — learners cannot be tied to a specific legal division.</p>
+      <div class="launch-links">
+        <a class="primary" href="./strict-sf/">Open strict Salesforce view</a>
+      </div>
+    </article>
+
+    <article class="launch-card">
+      <h2>Brand rollup view</h2>
+      <p>Opportunities, SC hours, and learning are grouped by global brand family (e.g. Accenture, Capgemini, Sabio). Useful for a consolidated picture across regional legal entities.</p>
+      <div class="launch-links">
+        <a class="primary" href="./brand-rollup/">Open brand rollup view</a>
+      </div>
+    </article>
+
+    <div class="launch-note">
+      <strong>Safe joins:</strong> tasks ↔ opportunities match directly on opportunity name. Learning ↔ organisation matches via email domain map. What we cannot claim is that a learner in one legal division drove outcomes in that same division’s opps.
+    </div>
+  </main>
+</body>
+</html>

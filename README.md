@@ -17,7 +17,13 @@ Optional: a Seismic learning CSV can still be loaded but is not used in v2 views
 
 ## Hosting
 
-Published on GitHub Pages from `main`: [https://pbsfgenesys-lang.github.io/PMBGen/](https://pbsfgenesys-lang.github.io/PMBGen/)
+Published on GitHub Pages:
+
+- **Launcher:** [https://pbsfgenesys-lang.github.io/PMBGen/](https://pbsfgenesys-lang.github.io/PMBGen/)
+- **Strict Salesforce view:** [https://pbsfgenesys-lang.github.io/PMBGen/strict-sf/](https://pbsfgenesys-lang.github.io/PMBGen/strict-sf/) — legal entities on opps; learning at brand level
+- **Brand rollup view:** [https://pbsfgenesys-lang.github.io/PMBGen/brand-rollup/](https://pbsfgenesys-lang.github.io/PMBGen/brand-rollup/) — global brand families
+
+The `strict-sf` and `brand-rollup` branches deploy into subfolders via GitHub Actions. Both use the same upload workflow in Admin.
 
 No backend; data never leaves the user's browser.
 

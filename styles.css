@@ -31,6 +31,52 @@ html, body {
   color: #fff;
   padding: 20px 28px 0;
 }
+
+.partner-view-banner {
+  background: #fff8e6;
+  border-bottom: 1px solid #f0d48a;
+  color: #5c4a12;
+  padding: 14px 28px;
+  font-size: 0.92rem;
+}
+.partner-view-banner-inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.partner-view-banner p {
+  margin: 6px 0 0;
+  max-width: 760px;
+}
+.partner-view-learning-note {
+  font-size: 0.88rem;
+  color: #7a6218;
+}
+.partner-view-banner-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.partner-view-banner-links a {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+.partner-view-banner-links a:hover {
+  text-decoration: underline;
+}
+.partner-view-tag {
+  background: #fff;
+  border: 1px solid #e8c96d;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #7a6218;
+}
 .banner-top {
   display: flex;
   justify-content: space-between;

@@ -27,6 +27,43 @@
     return (PD.state?.model?.learningRows || []).length > 0;
   }
 
+  function partnerViewMeta() {
+    return PD.getPartnerViewMeta ? PD.getPartnerViewMeta() : { mode: 'strict-sf', title: 'Strict Salesforce view', description: '', learningNote: '' };
+  }
+
+  function renderPartnerViewBanner() {
+    const host = $('#partner-view-banner');
+    if (!host || !PD.getPartnerViewMeta) return;
+    const meta = partnerViewMeta();
+    const other = meta.mode === 'strict-sf'
+      ? { href: '/PMBGen/brand-rollup/', label: 'Brand rollup view' }
+      : { href: '/PMBGen/strict-sf/', label: 'Strict Salesforce view' };
+    host.innerHTML = `<div class="partner-view-banner-inner">
+      <div>
+        <strong>${PD.escapeHtml(meta.title)}</strong>
+        <p>${PD.escapeHtml(meta.description)}</p>
+        <p class="partner-view-learning-note">${PD.escapeHtml(meta.learningNote)}</p>
+      </div>
+      <div class="partner-view-banner-links">
+        <span class="partner-view-tag">${meta.mode === 'strict-sf' ? 'Legal entities on opps' : 'Brand families'}</span>
+        <a href="${other.href}">Switch to ${PD.escapeHtml(other.label)}</a>
+        <a href="/PMBGen/">All views</a>
+      </div>
+    </div>`;
+  }
+
+  function partnerNameCell(p) {
+    const meta = partnerViewMeta();
+    if (meta.mode === 'strict-sf' && p.brandFamily && p.brandFamily !== p.partnerGroup) {
+      const shared = p.learningSharedAcross > 1 ? ` · learning shared across ${p.learningSharedAcross} legal entities` : '';
+      return `<strong>${PD.escapeHtml(p.partnerGroup)}</strong><div class="table-subtext">Brand: ${PD.escapeHtml(p.brandFamily)}${shared}</div>`;
+    }
+    if (meta.mode === 'brand-rollup' && p.legalEntity && p.legalEntity !== p.partnerGroup) {
+      return `<strong>${PD.escapeHtml(p.partnerGroup)}</strong><div class="table-subtext">Salesforce legal entities roll up to this brand</div>`;
+    }
+    return `<strong>${PD.escapeHtml(p.partnerGroup)}</strong>`;
+  }
+
   function loadPersistedDomainMap() {
     if (!PD.setPersistedDomainMap) return;
     try {
@@ -898,7 +935,7 @@
     body.innerHTML = partners.map((p) => {
       const band = effectivenessBand(p, medians);
       return `<tr class="clickable" data-partner-key="${PD.escapeHtml(p.partnerKey)}">
-        <td><strong>${PD.escapeHtml(p.partnerGroup)}</strong></td>
+        <td>${partnerNameCell(p)}</td>
         <td>${bandHtml(band)}</td>
         <td>${PD.formatInt(p.opportunityCount)}</td>
         <td>${PD.formatHours(p.totalHours)}</td>
@@ -938,7 +975,7 @@
   function scorecardRowHtml(p, medians) {
     const band = effectivenessBand(p, medians);
     return `<tr class="clickable" data-partner-key="${PD.escapeHtml(p.partnerKey)}">
-      <td>${PD.escapeHtml(p.partnerGroup)}</td>
+      <td>${partnerNameCell(p)}</td>
       <td>${bandHtml(band)}</td>
       <td>${PD.formatInt(p.opportunityCount)}</td>
       <td>${PD.formatInt(p.oppsWithHours)}</td>
@@ -1014,7 +1051,10 @@
       <p>${PD.formatHours(partner.totalHours)} across ${PD.formatInt(partner.opportunityCount)} opportunities (${partner.avgHoursPerOppWithHours !== null ? PD.formatHours(partner.avgHoursPerOppWithHours) : '–'} per opp with SC time, ${PD.formatInt(partner.oppsWithHours)} opps with hours). ${partner.winRate !== null ? `Win rate ${PD.formatPercent(partner.winRate)} (${PD.formatInt(partner.wonCount)} won / ${PD.formatInt(partner.closedCount)} closed).` : ''} SC efficiency: ${formatEfficiencyHours(partner.hoursPerWon)} per won · ${formatEfficiencyHours(partner.hoursPer100k)} per $100k won.${partner.learningSeconds > 0 ? ` Learning: ${PD.formatDuration(partner.learningSeconds)} (${PD.formatInt(partner.learnerCount)} learners).` : ''} ${PD.escapeHtml(partner.signal)}.</p>
     `;
 
-    const learningRows = (PD.state.model.learningRows || []).filter((r) => r.partnerKey === key);
+    const learningRows = (PD.state.model.learningRows || []).filter((r) => {
+      if (partnerViewMeta().mode === 'strict-sf') return (r.brandFamilyKey || r.partnerKey) === (partner.brandFamilyKey || partner.partnerKey);
+      return (r.partnerKey || '') === key;
+    });
     const courseMap = new Map();
     for (const row of learningRows) {
       const title = row.learningCourse || '(blank)';
@@ -1212,6 +1252,7 @@
     ui.renderGen += 1;
     const renderGen = ui.renderGen;
 
+    renderPartnerViewBanner();
     renderStatus();
 
     if (!hasData()) {
