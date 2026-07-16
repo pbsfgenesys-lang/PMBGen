@@ -29,9 +29,27 @@ No backend; data never leaves the user's browser.
 
 **Domain map CSV:** load via Admin from your team's SharePoint share — it is **not** stored in this repository (confidential).
 
+## Anonymous usage stats (optional)
+
+Page views and country breakdown only — no Salesforce data, no file names, no partner names. Implemented with [GoatCounter](https://www.goatcounter.com/) (free tier, no cookies).
+
+1. Create a GoatCounter account and add a site named `pbsfgenesys-lang.github.io` (GitHub Pages hostname).
+2. Copy your **count URL** (looks like `https://pmbgen.goatcounter.com/count`).
+3. In `index.html`, set:
+   ```javascript
+   window.PARTNER_DASHBOARD_ANALYTICS = {
+     enabled: true,
+     endpoint: 'https://YOUR-CODE.goatcounter.com/count'
+   };
+   ```
+4. Push to `strict-sf` (and `brand-rollup` / `main` if you want the launcher tracked too).
+
+The GoatCounter dashboard shows daily page views, paths (`/PMBGen/strict-sf/`, etc.), countries, referrers, and browsers. Each full page load counts once; in-app tab clicks do not (fine for “who opened the Champions link?”).
+
 ## Files
 
 - `index.html` — UI shell
+- `analytics.js` — optional anonymous page-view counter (GoatCounter)
 - `styles.css` — layout and charts
 - `app.js` — views, filters, and charts
 - `data-engine.js` — parse/join logic (Salesforce exports)

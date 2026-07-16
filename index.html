@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Partner Performance Dashboard</title>
   <link rel="stylesheet" href="styles.css">
+  <script>
+    window.PARTNER_DASHBOARD_ANALYTICS = {
+      enabled: true,
+      endpoint: 'https://pbsfpmb.goatcounter.com/count'
+    };
+  </script>
+  <script defer src="./analytics.js"></script>
 </head>
 <body>
   <div id="loading" class="loading-overlay" aria-live="polite">Reading exports and building views — large files may take a minute…</div>
