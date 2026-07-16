@@ -404,16 +404,16 @@
         const midC = Math.floor(withClosed.length / 2);
         const earlyWr = withClosed.slice(0, midC).reduce((s, r) => s + (r.winRate || 0), 0) / Math.max(1, midC);
         const lateWr = withClosed.slice(midC).reduce((s, r) => s + (r.winRate || 0), 0) / Math.max(1, withClosed.length - midC);
-        winTrend = lateWr > earlyWr + 0.05 ? ' Win rate trended up in later quarters.' : lateWr < earlyWr - 0.05 ? ' Win rate trended down in later quarters.' : ' Win rate was relatively stable across quarters with closes.';
+        winTrend = lateWr > earlyWr + 0.05 ? ' Win rate trended up in later calendar quarters.' : lateWr < earlyWr - 0.05 ? ' Win rate trended down in later calendar quarters.' : ' Win rate was relatively stable across calendar quarters with closes.';
       }
-      return `SC hours per active quarter are ${scTrend} (early avg ${PD.formatHours(early)} → recent avg ${PD.formatHours(late)}).${winTrend} Compare bars (effort) with the win-rate line (outcomes) — rising SC with falling win rate may signal reliance; falling SC with stable wins may signal maturity.`;
+      return `SC hours per active calendar quarter are ${scTrend} (early avg ${PD.formatHours(early)} → recent avg ${PD.formatHours(late)}).${winTrend} Compare bars (effort) with the win-rate line (outcomes) — rising SC with falling win rate may signal reliance; falling SC with stable wins may signal maturity.`;
     }
-    return 'Limited quarters with data — widen filters or load a longer task export for clearer trends.';
+    return 'Limited calendar quarters with data — widen filters or load a longer task export for clearer trends.';
   }
 
   function partnerTrendSvg(rows) {
     const series = rows.filter((r) => r.scHours > 0 || r.closed > 0);
-    if (!series.length) return emptyChart('No quarterly SC hours or closed deals for this partner in the current filter.');
+    if (!series.length) return emptyChart('No calendar-quarter SC hours or closed deals for this partner in the current filter.');
     const width = 980;
     const height = 360;
     const pad = { left: 64, right: 56, top: 28, bottom: 72 };
@@ -444,7 +444,11 @@
       return `<g><line x1="${pad.left}" y1="${y}" x2="${pad.left + plotW}" y2="${y}" class="scatter-grid"></line><text x="${pad.left - 8}" y="${y + 4}" text-anchor="end" class="chart-meta">${PD.escapeHtml(PD.formatHours(maxHours * p))}</text></g>`;
     }).join('');
     const yWin = [0, 0.5, 1].map((p) => `<text x="${width - pad.right + 8}" y="${pad.top + plotH - p * plotH + 4}" class="chart-meta">${Math.round(p * 100)}%</text>`).join('');
-    return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Partner SC hours and win rate by quarter">${yHours}${yWin}${bars}${winPath}${xLabels}<line x1="${pad.left}" y1="${pad.top + plotH}" x2="${pad.left + plotW}" y2="${pad.top + plotH}" class="scatter-axis"></line><text x="${pad.left + plotW / 2}" y="${height - 8}" text-anchor="middle" class="axis-label">Calendar quarter</text><text x="18" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(-90 18 ${pad.top + plotH / 2})">SC hours</text><text x="${width - 18}" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(90 ${width - 18} ${pad.top + plotH / 2})">Win rate</text></svg>`;
+    return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Partner SC hours and win rate by calendar quarter">${yHours}${yWin}${bars}${winPath}${xLabels}<line x1="${pad.left}" y1="${pad.top + plotH}" x2="${pad.left + plotW}" y2="${pad.top + plotH}" class="scatter-axis"></line><text x="${pad.left + plotW / 2}" y="${height - 8}" text-anchor="middle" class="axis-label">Calendar quarter (not Genesys FY)</text><text x="18" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(-90 18 ${pad.top + plotH / 2})">SC hours</text><text x="${width - 18}" y="${pad.top + plotH / 2}" text-anchor="middle" class="axis-label" transform="rotate(90 ${width - 18} ${pad.top + plotH / 2})">Win rate</text></svg>`;
+  }
+
+  function calendarQuarterNote() {
+    return 'Quarters are calendar quarters (Q1 Jan–Mar, Q2 Apr–Jun, Q3 Jul–Sep, Q4 Oct–Dec), not Genesys fiscal quarters (FY starts 1 February).';
   }
 
   function scTrackingFootnote() {
@@ -453,7 +457,7 @@
     if (!start) return 'SC task dates are required for trend and heatmap views.';
     const end = cov?.tasks?.range?.max;
     const span = end ? ` (${coverageRangeLabel(cov.tasks.range)})` : '';
-    return `SC task logging in this export starts ${PD.formatShortDate(start)}${span}. Older closed deals may show wins without logged SC hours — that is missing data, not zero support. Campaign and initiative time is excluded from opp-aligned quarters.`;
+    return `SC task logging in this export starts ${PD.formatShortDate(start)}${span}. Older closed deals may show wins without logged SC hours — that is missing data, not zero support. Campaign and initiative time is excluded from opp-aligned calendar quarters. ${calendarQuarterNote()}`;
   }
 
   function quarterLabelShort(key) {
@@ -541,7 +545,7 @@
     const low = formatEfficiencyHours(data.thresholds.low);
     const high = formatEfficiencyHours(data.thresholds.high);
     if (legendNote) {
-      legendNote.textContent = `Colour bands are comparative for this view only — not fixed targets. Among partner-quarters shown here (top 24 partners by SC hours in your current filter), green is the lowest third of SC hours per won (≤${low}), amber is the middle third (${low}–${high}), and red is the highest third (>${high}). Cell numbers are SC hours per won that quarter.`;
+      legendNote.textContent = `Colour bands are comparative for this view only — not fixed targets. Among partner–calendar-quarters shown here (top 24 partners by SC hours in your current filter), green is the lowest third of SC hours per won (≤${low}), amber is the middle third (${low}–${high}), and red is the highest third (>${high}). Cell numbers are SC hours per won that calendar quarter.`;
     }
 
     const header = `<tr><th class="heat-sticky">Partner</th>${data.quarters.map((q) => `<th>${PD.escapeHtml(quarterLabelShort(q))}</th>`).join('')}</tr>`;
@@ -566,7 +570,7 @@
         <span class="heat-good">Green — lowest third (≤${low})</span>
         <span class="heat-mid">Amber — middle third (${low}–${high})</span>
         <span class="heat-bad">Red — highest third (>${high})</span>
-        <span class="heat-pending">Blue — SC logged, no wins that quarter (†)</span>
+        <span class="heat-pending">Blue — SC logged, no wins that calendar quarter (†)</span>
         <span class="heat-empty">Grey — no SC and no closes</span>
       </div>
     `;
@@ -1068,7 +1072,7 @@
         </div>
       </article>
       <article class="panel ${ui.detailSub === 'trends' ? '' : 'hidden'}" data-sub-panel="trends">
-        <div class="panel-head"><div><h2>SC effort vs outcomes over time</h2><p>Quarterly SC hours (bars) and closed win rate (line) — uses task dates and opportunity close dates</p></div></div>
+        <div class="panel-head"><div><h2>SC effort vs outcomes over time</h2><p>Calendar-quarter SC hours (bars) and closed win rate (line) — task dates and opportunity close dates; not Genesys FY quarters</p></div></div>
         <p class="join-note muted" style="margin:0 16px 8px">${PD.escapeHtml(scTrackingFootnote())}</p>
         <p class="join-note muted" style="margin:0 16px 8px">${PD.escapeHtml(trendInsight)}</p>
         <div class="trend-legend"><span class="sc">SC hours</span><span class="win">Win rate (closed deals)</span></div>
