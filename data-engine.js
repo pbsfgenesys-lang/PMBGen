@@ -121,6 +121,15 @@
     if (value === null || value === undefined || Number.isNaN(value)) return '–';
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(value);
   }
+  function formatAcvValue(value) {
+    if (value === null || value === undefined || Number.isNaN(value)) return '–';
+    const abs = Math.abs(value);
+    const sign = value < 0 ? '-' : '';
+    if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(1)}B`;
+    if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(1)}M`;
+    if (abs >= 1e3) return `${sign}${(abs / 1e3).toFixed(0)}k`;
+    return `${sign}${Math.round(abs)}`;
+  }
   function formatShortDate(value) {
     if (!value) return '–';
     const date = value instanceof Date ? value : parseDateValue(value);
@@ -1702,7 +1711,8 @@
           openCount: 0,
           closedCount: 0,
           totalValue: 0,
-          wonValue: 0
+          wonValue: 0,
+          openValue: 0
         });
       }
       const p = map.get(key);
@@ -1716,6 +1726,7 @@
       const value = Math.max(0, row.bookingValue || row.totalAmount || 0);
       p.totalValue += value;
       if (row.outcome === 'Won') p.wonValue += value;
+      if (row.outcome === 'Open') p.openValue += value;
     }
     const legalEntitiesByBrand = new Map();
     for (const p of map.values()) {
@@ -1745,6 +1756,7 @@
         avgHoursPerOppWithHours: p.oppsWithHours ? p.totalHours / p.oppsWithHours : null,
         hoursPerWon: p.wonCount ? p.totalHours / p.wonCount : null,
         hoursPer100k: p.wonValue > 0 ? p.totalHours / (p.wonValue / 100000) : null,
+        hoursPer100kPipeline: p.totalValue > 0 ? p.totalHours / (p.totalValue / 100000) : null,
         learningSecondsPerLearner: learnerCount ? learningSeconds / learnerCount : null,
         learningSecondsPerEngagedLearner: engagedLearnerCount ? learningSeconds / engagedLearnerCount : null,
         learningHoursPerLearner: learnerCount ? (learningSeconds / learnerCount) / 3600 : null,
@@ -1925,6 +1937,8 @@
     const wonCount = joined.filter((row) => row.outcome === 'Won').length;
     const winRate = closedCount ? wonCount / closedCount : null;
     const wonValue = joined.reduce((sum, row) => sum + (row.outcome === 'Won' ? Math.max(0, row.bookingValue || row.totalAmount || 0) : 0), 0);
+    const totalValue = joined.reduce((sum, row) => sum + Math.max(0, row.bookingValue || row.totalAmount || 0), 0);
+    const openValue = joined.reduce((sum, row) => sum + (row.outcome === 'Open' ? Math.max(0, row.bookingValue || row.totalAmount || 0) : 0), 0);
     const learningSeconds = learningInScope.reduce((sum, row) => sum + (row.learningSeconds || 0), 0);
     const engagedLearners = new Set(learningInScope.filter((row) => row.engagedFlag).map((row) => row.email)).size;
     const totalLearners = new Set(learningInScope.map((row) => row.email)).size;
@@ -1947,6 +1961,10 @@
         winRate,
         hoursPerWon: wonCount ? totalHours / wonCount : null,
         hoursPer100k: wonValue > 0 ? totalHours / (wonValue / 100000) : null,
+        hoursPer100kPipeline: totalValue > 0 ? totalHours / (totalValue / 100000) : null,
+        totalValue,
+        wonValue,
+        openValue,
         learningSeconds,
         engagedLearners,
         totalLearners,
@@ -2236,7 +2254,7 @@
   }
   function exportPartners() {
     if (!state.derived) return;
-    downloadCsv('partner-summary.csv', sortRows(state.derived.partnerSummary, state.ui.partnerSort).map((row) => ({ Partner: row.partnerGroup, Opportunities: row.opportunityCount, OpportunitiesWithHours: row.oppsWithHours, SCHours: row.totalHours, Won: row.wonCount, Lost: row.lostCount, Open: row.openCount, WinRate: row.winRate, WonValue: row.wonValue, HoursPerWon: row.hoursPerWon, HoursPer100kWon: row.hoursPer100k, LearningSeconds: row.learningSeconds, LearningHours: row.learningHours, Learners: row.learnerCount, EngagedLearners: row.engagedLearnerCount, LearningHoursPerLearner: row.learningHoursPerLearner, SCHoursPerEngagedLearner: row.scHoursPerEngagedLearner, Signal: row.signal })));
+    downloadCsv('partner-summary.csv', sortRows(state.derived.partnerSummary, state.ui.partnerSort).map((row) => ({ Partner: row.partnerGroup, Opportunities: row.opportunityCount, OpportunitiesWithHours: row.oppsWithHours, SCHours: row.totalHours, PipelineAcv: row.totalValue, WonAcv: row.wonValue, OpenAcv: row.openValue, Won: row.wonCount, Lost: row.lostCount, Open: row.openCount, WinRate: row.winRate, WonValue: row.wonValue, HoursPerWon: row.hoursPerWon, HoursPer100kWon: row.hoursPer100k, HoursPer100kPipeline: row.hoursPer100kPipeline, LearningSeconds: row.learningSeconds, LearningHours: row.learningHours, Learners: row.learnerCount, EngagedLearners: row.engagedLearnerCount, LearningHoursPerLearner: row.learningHoursPerLearner, SCHoursPerEngagedLearner: row.scHoursPerEngagedLearner, Signal: row.signal })));
   }
   function exportOpportunities() {
     if (!state.derived) return;
@@ -2412,6 +2430,8 @@
     formatDuration,
     formatPercent,
     formatInt,
+    formatAcvValue,
+    formatCurrency,
     escapeHtml,
     cleanText,
     sortRows,

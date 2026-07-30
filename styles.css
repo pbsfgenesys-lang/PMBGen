@@ -76,6 +76,11 @@ html, body {
 .partner-view-footer-text {
   margin-right: 4px;
 }
+.table-scroll td.num,
+.table-scroll th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .partner-view-tag {
   background: #fff;
   border: 1px solid #e8c96d;

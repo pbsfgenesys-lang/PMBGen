@@ -71,7 +71,7 @@
           <div class="panel-head">
             <div>
               <h2>Partner effectiveness matrix</h2>
-              <p>Opportunity volume vs SC hours — bubble colour = win rate</p>
+              <p>Opportunity volume vs SC hours — hover for ACV; bubble colour = win rate</p>
             </div>
           </div>
           <div id="chart-effectiveness" class="chart-host"></div>
@@ -161,10 +161,12 @@
                   <th>Partner</th>
                   <th>Band</th>
                   <th>Opps</th>
+                  <th>Pipeline ACV</th>
+                  <th>Won ACV</th>
                   <th>SC hrs</th>
                 <th>Win rate</th>
                 <th>Learning</th>
-                <th>Hrs / won</th>
+                <th>Hrs / $100k won</th>
                 <th>Signal</th>
                 </tr>
               </thead>
@@ -196,8 +198,11 @@
         <label>Sort by
           <select id="partner-sort">
             <option value="totalHours">SC hours</option>
-            <option value="hoursPerWon">SC hours / won</option>
             <option value="hoursPer100k">SC hours / $100k won</option>
+            <option value="hoursPer100kPipeline">SC hours / $100k pipeline</option>
+            <option value="wonValue">Won ACV</option>
+            <option value="totalValue">Pipeline ACV</option>
+            <option value="hoursPerWon">SC hours / won</option>
             <option value="opportunityCount">Opportunity count</option>
             <option value="winRate">Win rate</option>
             <option value="riskScore">Review priority</option>
@@ -227,7 +232,7 @@
         <div class="panel-head">
           <div>
             <h2>Partner scorecard</h2>
-            <p>SC effort, pipeline volume, and conversion in one view</p>
+            <p>SC effort, pipeline ACV, and conversion — Gross ACV Booking from Salesforce (mixed currencies in export)</p>
           </div>
         </div>
         <div class="table-scroll">
@@ -239,9 +244,12 @@
                 <th>Opps</th>
                 <th>Opps w/ hrs</th>
                 <th>SC hrs</th>
+                <th>Pipeline ACV</th>
+                <th>Won ACV</th>
+                <th>Open ACV</th>
                 <th>SC hrs/opp</th>
-                <th>Hrs / won</th>
                 <th>Hrs / $100k won</th>
+                <th>Hrs / $100k pipeline</th>
                 <th>Learning hrs</th>
                 <th>Learners</th>
                 <th>Won</th>

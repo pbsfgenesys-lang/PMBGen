@@ -168,6 +168,10 @@
     return `<span class="band ${PD.escapeHtml(band.id)}">${PD.escapeHtml(band.label)}</span>`;
   }
 
+  function formatAcv(value) {
+    return PD.formatAcvValue ? PD.formatAcvValue(value) : '–';
+  }
+
   function formatEfficiencyHours(value) {
     if (value === null || value === undefined || !Number.isFinite(value)) return '–';
     const n = Number(value);
@@ -627,7 +631,7 @@
     const top = PD.sortRows(rows, { key: 'totalHours', dir: 'desc' }).slice(0, 10);
     const points = rows.map((p) => {
       const win = p.winRate !== null ? PD.formatPercent(p.winRate) : '–';
-      const tip = `${p.partnerGroup} — ${PD.formatInt(p.opportunityCount)} opps, ${PD.formatHours(p.totalHours)} SC, ${win} win rate`;
+      const tip = `${p.partnerGroup} — ${PD.formatInt(p.opportunityCount)} opps, ${formatAcv(p.totalValue)} pipeline ACV, ${formatAcv(p.wonValue)} won, ${PD.formatHours(p.totalHours)} SC, ${win} win rate`;
       return `<circle cx="${x(p.opportunityCount)}" cy="${y(p.totalHours)}" r="${r(p.oppsWithHours)}" fill="${winRateColor(p.winRate)}" fill-opacity="0.72" stroke="#fff" stroke-width="1.5" class="scatter-point"><title>${PD.escapeHtml(tip)}</title></circle>`;
     }).join('');
     const labels = top.map((p) => `<text x="${x(p.opportunityCount) + 8}" y="${y(p.totalHours) - 6}" class="chart-meta">${PD.escapeHtml(p.partnerGroup.length > 22 ? `${p.partnerGroup.slice(0, 20)}…` : p.partnerGroup)}</text>`).join('');
@@ -688,7 +692,7 @@
   }
 
   function partnerSortState() {
-    const ascKeys = new Set(['partnerGroup', 'hoursPerWon', 'hoursPer100k', 'avgHoursPerOppWithHours']);
+    const ascKeys = new Set(['partnerGroup', 'hoursPerWon', 'hoursPer100k', 'hoursPer100kPipeline', 'avgHoursPerOppWithHours']);
     return { key: ui.partnerSortKey, dir: ascKeys.has(ui.partnerSortKey) ? 'asc' : 'desc' };
   }
 
@@ -788,7 +792,7 @@
     const good = watch.find((p) => p.signalClass === 'signal-good' || p.signalClass === 'signal-positive');
     if (alert) {
       host.className = 'insight alert';
-      host.innerHTML = `<strong>Needs attention:</strong> ${PD.escapeHtml(alert.partnerGroup)} — ${PD.formatHours(alert.totalHours)} across ${PD.formatInt(alert.opportunityCount)} opps, win rate ${PD.formatPercent(alert.winRate)}. ${PD.escapeHtml(alert.signal)}.`;
+      host.innerHTML = `<strong>Needs attention:</strong> ${PD.escapeHtml(alert.partnerGroup)} — ${PD.formatHours(alert.totalHours)} SC across ${PD.formatInt(alert.opportunityCount)} opps (${formatAcv(alert.wonValue)} won ACV), win rate ${PD.formatPercent(alert.winRate)}. ${PD.escapeHtml(alert.signal)}.`;
       return;
     }
     if (good) {
@@ -806,9 +810,10 @@
 
     $('#overview-kpis').innerHTML = `
       <article class="kpi"><p class="label">SC hours (filtered)</p><p class="value">${PD.formatHours(d.kpis.totalHours)}</p><p class="sub">${PD.formatInt(d.kpis.opportunities)} opps · ${pctWithHours}% with SC time</p></article>
+      <article class="kpi"><p class="label">Pipeline ACV</p><p class="value">${formatAcv(d.kpis.totalValue)}</p><p class="sub">${formatAcv(d.kpis.openValue)} open · ${formatAcv(d.kpis.wonValue)} won</p></article>
       <article class="kpi"><p class="label">Closed win rate</p><p class="value">${d.kpis.winRate !== null ? PD.formatPercent(d.kpis.winRate) : '–'}</p><p class="sub">Won vs lost in filter</p></article>
-      <article class="kpi"><p class="label">SC hours per won</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPerWon)}</p><p class="sub">Portfolio avg · filtered slice</p></article>
-      <article class="kpi"><p class="label">SC hours per $100k won</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPer100k)}</p><p class="sub">Uses Gross ACV Booking</p></article>
+      <article class="kpi"><p class="label">SC hours per $100k won</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPer100k)}</p><p class="sub">Won ACV in filter</p></article>
+      <article class="kpi"><p class="label">SC hours per $100k pipeline</p><p class="value">${formatEfficiencyHours(d.kpis.hoursPer100kPipeline)}</p><p class="sub">All opps in filter</p></article>
       ${hasLearningData() ? `<article class="kpi"><p class="label">Partner learning</p><p class="value">${PD.formatDuration(d.kpis.learningSeconds)}</p><p class="sub">${PD.formatInt(d.kpis.engagedLearners)} engaged learners in filter</p></article>` : ''}
       <article class="kpi"><p class="label">Active partners</p><p class="value">${PD.formatInt(partners.length)}</p><p class="sub">${PD.formatInt(withHours.length)} with SC hours</p></article>
     `;
@@ -825,7 +830,7 @@
         if (renderGen !== ui.renderGen || ui.page !== 'overview') return;
         const hourItems = PD.sortRows(partners.filter((p) => p.totalHours > 0), { key: 'totalHours', dir: 'desc' }).slice(0, 10).map((p) => ({
           label: p.partnerGroup,
-          meta: `${PD.formatInt(p.opportunityCount)} opps · ${PD.formatPercent(p.winRate)}`,
+          meta: `${formatAcv(p.wonValue)} won · ${PD.formatInt(p.opportunityCount)} opps`,
           value: p.totalHours,
           valueLabel: PD.formatHours(p.totalHours)
         }));
@@ -932,10 +937,12 @@
         <td>${partnerNameCell(p)}</td>
         <td>${bandHtml(band)}</td>
         <td>${PD.formatInt(p.opportunityCount)}</td>
+        <td>${formatAcv(p.totalValue)}</td>
+        <td>${formatAcv(p.wonValue)}</td>
         <td>${PD.formatHours(p.totalHours)}</td>
         <td>${p.winRate !== null ? PD.formatPercent(p.winRate) : '–'}</td>
         <td>${p.learningSeconds > 0 ? PD.formatDuration(p.learningSeconds) : '–'}</td>
-        <td>${formatEfficiencyHours(p.hoursPerWon)}</td>
+        <td>${formatEfficiencyHours(p.hoursPer100k)}</td>
         <td class="signal">${PD.escapeHtml(p.signal)}</td>
       </tr>`;
     }).join('');
@@ -974,9 +981,12 @@
       <td>${PD.formatInt(p.opportunityCount)}</td>
       <td>${PD.formatInt(p.oppsWithHours)}</td>
       <td>${PD.formatHours(p.totalHours)}</td>
+      <td class="num">${formatAcv(p.totalValue)}</td>
+      <td class="num">${formatAcv(p.wonValue)}</td>
+      <td class="num">${formatAcv(p.openValue)}</td>
       <td>${p.avgHoursPerOppWithHours !== null ? PD.formatHours(p.avgHoursPerOppWithHours) : '–'}</td>
-      <td>${formatEfficiencyHours(p.hoursPerWon)}</td>
       <td>${formatEfficiencyHours(p.hoursPer100k)}</td>
+      <td>${formatEfficiencyHours(p.hoursPer100kPipeline)}</td>
       <td>${p.learningSeconds > 0 ? PD.formatDuration(p.learningSeconds) : '–'}</td>
       <td>${p.learnerCount > 0 ? PD.formatInt(p.learnerCount) : '–'}</td>
       <td>${PD.formatInt(p.wonCount)}</td>
@@ -1042,7 +1052,7 @@
 
     $('#detail-hero').innerHTML = `
       <h2>${PD.escapeHtml(partner.partnerGroup)} ${bandHtml(band)}</h2>
-      <p>${PD.formatHours(partner.totalHours)} across ${PD.formatInt(partner.opportunityCount)} opportunities (${partner.avgHoursPerOppWithHours !== null ? PD.formatHours(partner.avgHoursPerOppWithHours) : '–'} per opp with SC time, ${PD.formatInt(partner.oppsWithHours)} opps with hours). ${partner.winRate !== null ? `Win rate ${PD.formatPercent(partner.winRate)} (${PD.formatInt(partner.wonCount)} won / ${PD.formatInt(partner.closedCount)} closed).` : ''} SC efficiency: ${formatEfficiencyHours(partner.hoursPerWon)} per won · ${formatEfficiencyHours(partner.hoursPer100k)} per $100k won.${partner.learningSeconds > 0 ? ` Learning: ${PD.formatDuration(partner.learningSeconds)} (${PD.formatInt(partner.learnerCount)} learners).` : ''} ${PD.escapeHtml(partner.signal)}.</p>
+      <p>${PD.formatHours(partner.totalHours)} SC across ${PD.formatInt(partner.opportunityCount)} opportunities · Pipeline ACV ${formatAcv(partner.totalValue)} (${formatAcv(partner.wonValue)} won, ${formatAcv(partner.openValue)} open). ${partner.avgHoursPerOppWithHours !== null ? `${PD.formatHours(partner.avgHoursPerOppWithHours)} SC per opp with hours (${PD.formatInt(partner.oppsWithHours)} opps).` : ''} ${partner.winRate !== null ? `Win rate ${PD.formatPercent(partner.winRate)} (${PD.formatInt(partner.wonCount)} won / ${PD.formatInt(partner.closedCount)} closed).` : ''} SC efficiency: ${formatEfficiencyHours(partner.hoursPer100k)} per $100k won · ${formatEfficiencyHours(partner.hoursPer100kPipeline)} per $100k pipeline.${partner.learningSeconds > 0 ? ` Learning: ${PD.formatDuration(partner.learningSeconds)} (${PD.formatInt(partner.learnerCount)} learners).` : ''} ${PD.escapeHtml(partner.signal)}.</p>
     `;
 
     const learningRows = (PD.state.model.learningRows || []).filter((r) => {
@@ -1070,12 +1080,13 @@
           <td>${PD.escapeHtml(o.opportunityName)}</td>
           <td>${PD.escapeHtml(o.stage || '–')}</td>
           <td>${outcomePill(o.outcome)}</td>
+          <td class="num">${formatAcv(o.bookingValue || o.totalAmount)}</td>
           <td>${PD.formatHours(o.totalHours)}</td>
           <td>${PD.escapeHtml(o.region || '–')}</td>
           <td>${PD.escapeHtml(o.subRegion || '–')}</td>
           <td>${PD.escapeHtml(o.opportunityOwner || '–')}</td>
         </tr>`).join('')
-      : '<tr><td colspan="7" class="muted">No opportunities for this partner in the current filter.</td></tr>';
+      : '<tr><td colspan="8" class="muted">No opportunities for this partner in the current filter.</td></tr>';
 
     const stageRows = stages.length
       ? stages.map((s) => `<tr>
@@ -1096,7 +1107,7 @@
     $('#detail-panels').innerHTML = `
       <article class="panel ${ui.detailSub === 'pipeline' ? '' : 'hidden'}" data-sub-panel="pipeline">
         <div class="panel-head"><div><h2>Opportunities</h2><p>${PD.formatInt(opps.length)} in scope</p></div></div>
-        <div class="table-scroll"><table><thead><tr><th>Opportunity</th><th>Stage</th><th>Outcome</th><th>SC hrs</th><th>L3</th><th>L4</th><th>Owner</th></tr></thead><tbody>${pipelineRows}</tbody></table></div>
+        <div class="table-scroll"><table><thead><tr><th>Opportunity</th><th>Stage</th><th>Outcome</th><th>ACV</th><th>SC hrs</th><th>L3</th><th>L4</th><th>Owner</th></tr></thead><tbody>${pipelineRows}</tbody></table></div>
       </article>
       <article class="panel ${ui.detailSub === 'sc' ? '' : 'hidden'}" data-sub-panel="sc">
         <div class="panel-head"><div><h2>SC effort</h2><p>Hours by stage and activity type</p></div></div>
@@ -1410,10 +1421,13 @@
       SCHoursPerOpp: p.avgHoursPerOpp,
       SCHoursPerOppWithHours: p.avgHoursPerOppWithHours,
       HoursPerWon: p.hoursPerWon,
+      PipelineAcv: p.totalValue,
+      WonAcv: p.wonValue,
+      OpenAcv: p.openValue,
       HoursPer100kWon: p.hoursPer100k,
+      HoursPer100kPipeline: p.hoursPer100kPipeline,
       LearningSeconds: p.learningSeconds,
       Learners: p.learnerCount,
-      WonValue: p.wonValue,
       Won: p.wonCount,
       Lost: p.lostCount,
       Open: p.openCount,
