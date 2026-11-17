@@ -1,0 +1,1717 @@
+{
+    "id": "custom_-_c09d2046-4468-4d77-a242-4f64660f4989",
+    "published": {
+        "id": "custom_-_c09d2046-4468-4d77-a242-4f64660f4989",
+        "name": "PB-Finanza-Cancel-Card",
+        "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+        "category": "AVA-Harness-Mock-Echo-DataAction",
+        "contract": {
+            "output": {
+                "successSchemaUri": "/api/v2/integrations/actions/custom_-_c09d2046-4468-4d77-a242-4f64660f4989/schemas/successschema.json",
+                "errorSchemaUri": "/api/v2/integrations/actions/custom_-_c09d2046-4468-4d77-a242-4f64660f4989/schemas/errorschema.json"
+            },
+            "input": {
+                "inputSchemaUri": "/api/v2/integrations/actions/custom_-_c09d2046-4468-4d77-a242-4f64660f4989/schemas/inputschema.json"
+            }
+        },
+        "version": 1,
+        "secure": false,
+        "config": {
+            "request": {
+                "requestUrlTemplate": "#set($p0 = \"$!{input.last_four}\")#set($p1 = \"$!{input.replacement_option}\")#set($p2 = \"$!{input.session_token}\")#set($k = \"$encoding.base64($p0)_$encoding.base64($p1)_$encoding.base64($p2)\")#set($e = {\"NzcyMA==_c2VuZF9ub3c=_U0VTUy1QUklZQQ==\":\"409\",\"NzcyMA==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1QUklZQQ==\":\"409\"})#set($c = {\"NDQxNw==_c2VuZF9ub3c=_U0VTUy1TQVJBSA==\":\"1\",\"NDQxNw==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1TQVJBSA==\":\"2\",\"OTAyNQ==_c2VuZF9ub3c=_U0VTUy1TQVJBSA==\":\"3\",\"OTAyNQ==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1TQVJBSA==\":\"4\",\"MzM4MQ==_c2VuZF9ub3c=_U0VTUy1HRU9GRg==\":\"5\",\"MzM4MQ==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1HRU9GRg==\":\"6\",\"MjQ2OA==_c2VuZF9ub3c=_U0VTUy1QQVRSSUNL\":\"7\",\"MjQ2OA==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1QQVRSSUNL\":\"8\",\"MTM1Nw==_c2VuZF9ub3c=_U0VTUy1QQVRSSUNL\":\"9\",\"MTM1Nw==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1QQVRSSUNL\":\"10\"})#if($e.containsKey($k))https://postman-echo.com/status/${e.get($k)}#elseif($c.containsKey($k))https://postman-echo.com/get?k=${c.get($k)}#{else}https://postman-echo.com/status/404#end",
+                "requestTemplateUri": "/api/v2/integrations/actions/custom_-_c09d2046-4468-4d77-a242-4f64660f4989/requesttemplates/defaultrequest.vm",
+                "requestType": "GET",
+                "headers": {
+                    "Accept": "application/json"
+                }
+            },
+            "response": {
+                "translationMap": {
+                    "mockKey": "$.args.k"
+                },
+                "translationMapDefaults": {
+                    "mockKey": "__unset__"
+                },
+                "successTemplateUri": "/api/v2/integrations/actions/custom_-_c09d2046-4468-4d77-a242-4f64660f4989/templates/successtemplate.vm"
+            }
+        },
+        "selfUri": "/api/v2/integrations/actions/custom_-_c09d2046-4468-4d77-a242-4f64660f4989?includeConfig=true"
+    },
+    "validation": {
+        "passed": [
+            {
+                "mock_id": "case-0",
+                "input": {
+                    "session_token": "SESS-SARAH",
+                    "last_four": "4417",
+                    "replacement_option": "send_now"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-SARAH",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-SARAH\",\"last_four\":\"4417\",\"replacement_option\":\"send_now\"}",
+                                "last_four": "4417",
+                                "replacement_option": "send_now",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=1"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "1"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "ad0983bd-b541-4b47-a80f-2c2966815e1b",
+                                    "inin-request-id": "22447325-749b-4829-90a7-26ad40f74db2",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=1"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"1\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"1\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"ad0983bd-b541-4b47-a80f-2c2966815e1b\",\n    \"inin-request-id\" : \"22447325-749b-4829-90a7-26ad40f74db2\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=1\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-48213",
+                                "replacement_days": 5
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-48213",
+                        "replacement_days": 5
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "NDQxNw==_c2VuZF9ub3c=_U0VTUy1TQVJBSA==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-1",
+                "input": {
+                    "session_token": "SESS-SARAH",
+                    "last_four": "4417",
+                    "replacement_option": "colleague_to_arrange"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-SARAH",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-SARAH\",\"last_four\":\"4417\",\"replacement_option\":\"colleague_to_arrange\"}",
+                                "last_four": "4417",
+                                "replacement_option": "colleague_to_arrange",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=2"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "2"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "b3735134-773a-4124-bf51-f3bf96c9888a",
+                                    "inin-request-id": "ad03cb29-38e8-4e7d-b777-eb0c07f0888a",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=2"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"2\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"2\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"b3735134-773a-4124-bf51-f3bf96c9888a\",\n    \"inin-request-id\" : \"ad03cb29-38e8-4e7d-b777-eb0c07f0888a\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=2\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-48213",
+                                "replacement_days": 0
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-48213",
+                        "replacement_days": 0
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "NDQxNw==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1TQVJBSA==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-2",
+                "input": {
+                    "session_token": "SESS-SARAH",
+                    "last_four": "9025",
+                    "replacement_option": "send_now"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-SARAH",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-SARAH\",\"last_four\":\"9025\",\"replacement_option\":\"send_now\"}",
+                                "last_four": "9025",
+                                "replacement_option": "send_now",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=3"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "3"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "5df70aba-152a-4627-98ff-dd67d7208283",
+                                    "inin-request-id": "74b466d3-e2db-4ba4-80b7-80f09f63dc81",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=3"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"3\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"3\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"5df70aba-152a-4627-98ff-dd67d7208283\",\n    \"inin-request-id\" : \"74b466d3-e2db-4ba4-80b7-80f09f63dc81\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=3\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-48214",
+                                "replacement_days": 5
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-48214",
+                        "replacement_days": 5
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "OTAyNQ==_c2VuZF9ub3c=_U0VTUy1TQVJBSA==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-3",
+                "input": {
+                    "session_token": "SESS-SARAH",
+                    "last_four": "9025",
+                    "replacement_option": "colleague_to_arrange"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-SARAH",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-SARAH\",\"last_four\":\"9025\",\"replacement_option\":\"colleague_to_arrange\"}",
+                                "last_four": "9025",
+                                "replacement_option": "colleague_to_arrange",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=4"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "4"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "6e076823-14ce-4132-99e0-29486d624567",
+                                    "inin-request-id": "76bbe5a3-999d-427d-8b97-3747b994fd99",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=4"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"4\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"4\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"6e076823-14ce-4132-99e0-29486d624567\",\n    \"inin-request-id\" : \"76bbe5a3-999d-427d-8b97-3747b994fd99\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=4\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-48214",
+                                "replacement_days": 0
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-48214",
+                        "replacement_days": 0
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "OTAyNQ==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1TQVJBSA==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-4",
+                "input": {
+                    "session_token": "SESS-GEOFF",
+                    "last_four": "3381",
+                    "replacement_option": "send_now"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-GEOFF",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-GEOFF\",\"last_four\":\"3381\",\"replacement_option\":\"send_now\"}",
+                                "last_four": "3381",
+                                "replacement_option": "send_now",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=5"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "5"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "d24c26de-9d94-4aba-8354-6f2ba6951e85",
+                                    "inin-request-id": "953862e0-df61-465c-8e4e-63cc25f89561",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=5"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"5\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"5\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"d24c26de-9d94-4aba-8354-6f2ba6951e85\",\n    \"inin-request-id\" : \"953862e0-df61-465c-8e4e-63cc25f89561\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=5\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-51877",
+                                "replacement_days": 5
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-51877",
+                        "replacement_days": 5
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MzM4MQ==_c2VuZF9ub3c=_U0VTUy1HRU9GRg==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-5",
+                "input": {
+                    "session_token": "SESS-GEOFF",
+                    "last_four": "3381",
+                    "replacement_option": "colleague_to_arrange"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-GEOFF",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-GEOFF\",\"last_four\":\"3381\",\"replacement_option\":\"colleague_to_arrange\"}",
+                                "last_four": "3381",
+                                "replacement_option": "colleague_to_arrange",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=6"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "6"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "84da1d97-3855-419c-bb93-227c8e51be7e",
+                                    "inin-request-id": "f0b0c392-2daa-4ad2-9def-4c923429cd71",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=6"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"6\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"6\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"84da1d97-3855-419c-bb93-227c8e51be7e\",\n    \"inin-request-id\" : \"f0b0c392-2daa-4ad2-9def-4c923429cd71\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=6\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-51877",
+                                "replacement_days": 0
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-51877",
+                        "replacement_days": 0
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MzM4MQ==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1HRU9GRg==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-6",
+                "input": {
+                    "session_token": "SESS-PRIYA",
+                    "last_four": "7720",
+                    "replacement_option": "send_now"
+                },
+                "outcome": "error",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PRIYA",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PRIYA\",\"last_four\":\"7720\",\"replacement_option\":\"send_now\"}",
+                                "last_four": "7720",
+                                "replacement_option": "send_now",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/status/409"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": false,
+                            "error": {
+                                "message": "Conflict",
+                                "code": "conflict",
+                                "status": 409,
+                                "messageParams": {},
+                                "contextId": "102a9929-3a90-4191-a4a2-9de4c0afb3c1",
+                                "details": [
+                                    {
+                                        "errorCode": "ACTION.REMOTE_ENDPOINT"
+                                    }
+                                ],
+                                "errors": [
+                                    {
+                                        "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":409} [102a9929-3a90-4191-a4a2-9de4c0afb3c1]",
+                                        "code": "CONFLICT",
+                                        "status": 409,
+                                        "messageParams": {},
+                                        "details": [],
+                                        "errors": []
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "error": {
+                        "message": "Conflict",
+                        "code": "conflict",
+                        "status": 409,
+                        "messageParams": {},
+                        "contextId": "102a9929-3a90-4191-a4a2-9de4c0afb3c1",
+                        "details": [
+                            {
+                                "errorCode": "ACTION.REMOTE_ENDPOINT"
+                            }
+                        ],
+                        "errors": [
+                            {
+                                "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":409} [102a9929-3a90-4191-a4a2-9de4c0afb3c1]",
+                                "code": "CONFLICT",
+                                "status": 409,
+                                "messageParams": {},
+                                "details": [],
+                                "errors": []
+                            }
+                        ]
+                    },
+                    "success": false
+                },
+                "reason": null,
+                "key": "NzcyMA==_c2VuZF9ub3c=_U0VTUy1QUklZQQ==",
+                "expected_status": 409,
+                "observed_status": 409,
+                "passed": true
+            },
+            {
+                "mock_id": "case-7",
+                "input": {
+                    "session_token": "SESS-PRIYA",
+                    "last_four": "7720",
+                    "replacement_option": "colleague_to_arrange"
+                },
+                "outcome": "error",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PRIYA",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PRIYA\",\"last_four\":\"7720\",\"replacement_option\":\"colleague_to_arrange\"}",
+                                "last_four": "7720",
+                                "replacement_option": "colleague_to_arrange",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/status/409"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": false,
+                            "error": {
+                                "message": "Conflict",
+                                "code": "conflict",
+                                "status": 409,
+                                "messageParams": {},
+                                "contextId": "08ff3cf6-0f0a-4400-87dd-dea1b328b6a2",
+                                "details": [
+                                    {
+                                        "errorCode": "ACTION.REMOTE_ENDPOINT"
+                                    }
+                                ],
+                                "errors": [
+                                    {
+                                        "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":409} [08ff3cf6-0f0a-4400-87dd-dea1b328b6a2]",
+                                        "code": "CONFLICT",
+                                        "status": 409,
+                                        "messageParams": {},
+                                        "details": [],
+                                        "errors": []
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "error": {
+                        "message": "Conflict",
+                        "code": "conflict",
+                        "status": 409,
+                        "messageParams": {},
+                        "contextId": "08ff3cf6-0f0a-4400-87dd-dea1b328b6a2",
+                        "details": [
+                            {
+                                "errorCode": "ACTION.REMOTE_ENDPOINT"
+                            }
+                        ],
+                        "errors": [
+                            {
+                                "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":409} [08ff3cf6-0f0a-4400-87dd-dea1b328b6a2]",
+                                "code": "CONFLICT",
+                                "status": 409,
+                                "messageParams": {},
+                                "details": [],
+                                "errors": []
+                            }
+                        ]
+                    },
+                    "success": false
+                },
+                "reason": null,
+                "key": "NzcyMA==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1QUklZQQ==",
+                "expected_status": 409,
+                "observed_status": 409,
+                "passed": true
+            },
+            {
+                "mock_id": "case-8",
+                "input": {
+                    "session_token": "SESS-PATRICK",
+                    "last_four": "2468",
+                    "replacement_option": "send_now"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PATRICK",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PATRICK\",\"last_four\":\"2468\",\"replacement_option\":\"send_now\"}",
+                                "last_four": "2468",
+                                "replacement_option": "send_now",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=7"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "7"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "822a31ac-476e-4b6a-9c82-f6382262afa6",
+                                    "inin-request-id": "059ae667-700e-4ba7-8c4c-9f9ef52a78db",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=7"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"7\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"7\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"822a31ac-476e-4b6a-9c82-f6382262afa6\",\n    \"inin-request-id\" : \"059ae667-700e-4ba7-8c4c-9f9ef52a78db\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=7\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-60211",
+                                "replacement_days": 5
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-60211",
+                        "replacement_days": 5
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MjQ2OA==_c2VuZF9ub3c=_U0VTUy1QQVRSSUNL",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-9",
+                "input": {
+                    "session_token": "SESS-PATRICK",
+                    "last_four": "2468",
+                    "replacement_option": "colleague_to_arrange"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PATRICK",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PATRICK\",\"last_four\":\"2468\",\"replacement_option\":\"colleague_to_arrange\"}",
+                                "last_four": "2468",
+                                "replacement_option": "colleague_to_arrange",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=8"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "8"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "22bef035-a928-4288-a560-ff6aa8a41c6f",
+                                    "inin-request-id": "4e806432-6e7f-4ad5-9e4d-b0e8754df08f",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=8"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"8\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"8\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"22bef035-a928-4288-a560-ff6aa8a41c6f\",\n    \"inin-request-id\" : \"4e806432-6e7f-4ad5-9e4d-b0e8754df08f\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=8\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-60211",
+                                "replacement_days": 0
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-60211",
+                        "replacement_days": 0
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MjQ2OA==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1QQVRSSUNL",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-10",
+                "input": {
+                    "session_token": "SESS-PATRICK",
+                    "last_four": "1357",
+                    "replacement_option": "send_now"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PATRICK",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PATRICK\",\"last_four\":\"1357\",\"replacement_option\":\"send_now\"}",
+                                "last_four": "1357",
+                                "replacement_option": "send_now",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=9"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "9"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "dee2ed5c-c71a-432b-89e1-6d6c89f41708",
+                                    "inin-request-id": "87617af7-f189-4e39-83da-8afe8ee63013",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=9"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"9\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"9\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"dee2ed5c-c71a-432b-89e1-6d6c89f41708\",\n    \"inin-request-id\" : \"87617af7-f189-4e39-83da-8afe8ee63013\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=9\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-60212",
+                                "replacement_days": 5
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-60212",
+                        "replacement_days": 5
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MTM1Nw==_c2VuZF9ub3c=_U0VTUy1QQVRSSUNL",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-11",
+                "input": {
+                    "session_token": "SESS-PATRICK",
+                    "last_four": "1357",
+                    "replacement_option": "colleague_to_arrange"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PATRICK",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PATRICK\",\"last_four\":\"1357\",\"replacement_option\":\"colleague_to_arrange\"}",
+                                "last_four": "1357",
+                                "replacement_option": "colleague_to_arrange",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=10"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "10"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "d29f38f6-ef65-4e8b-a025-e04c02650ddd",
+                                    "inin-request-id": "58f780a6-23d8-4d0d-aed6-155fa92b3898",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=10"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"10\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"10\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"d29f38f6-ef65-4e8b-a025-e04c02650ddd\",\n    \"inin-request-id\" : \"58f780a6-23d8-4d0d-aed6-155fa92b3898\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=10\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "confirmation_ref": "FZ-60212",
+                                "replacement_days": 0
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "confirmation_ref": "FZ-60212",
+                        "replacement_days": 0
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MTM1Nw==_Y29sbGVhZ3VlX3RvX2FycmFuZ2U=_U0VTUy1QQVRSSUNL",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "default-probe-0",
+                "input": {
+                    "last_four": "mock-unmatched-0",
+                    "replacement_option": "mock-unmatched-0",
+                    "session_token": "mock-unmatched-0"
+                },
+                "outcome": "error",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "mock-unmatched-0",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"last_four\":\"mock-unmatched-0\",\"replacement_option\":\"mock-unmatched-0\",\"session_token\":\"mock-unmatched-0\"}",
+                                "last_four": "mock-unmatched-0",
+                                "replacement_option": "mock-unmatched-0",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/status/404"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": false,
+                            "error": {
+                                "message": "Not Found",
+                                "code": "not.found",
+                                "status": 404,
+                                "messageParams": {},
+                                "contextId": "ae5b1da5-5885-48a8-ad8d-98e81933857a",
+                                "details": [
+                                    {
+                                        "errorCode": "ACTION.REMOTE_ENDPOINT"
+                                    }
+                                ],
+                                "errors": [
+                                    {
+                                        "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":404} [ae5b1da5-5885-48a8-ad8d-98e81933857a]",
+                                        "code": "NOT_FOUND",
+                                        "status": 404,
+                                        "messageParams": {},
+                                        "details": [],
+                                        "errors": []
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "error": {
+                        "message": "Not Found",
+                        "code": "not.found",
+                        "status": 404,
+                        "messageParams": {},
+                        "contextId": "ae5b1da5-5885-48a8-ad8d-98e81933857a",
+                        "details": [
+                            {
+                                "errorCode": "ACTION.REMOTE_ENDPOINT"
+                            }
+                        ],
+                        "errors": [
+                            {
+                                "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":404} [ae5b1da5-5885-48a8-ad8d-98e81933857a]",
+                                "code": "NOT_FOUND",
+                                "status": 404,
+                                "messageParams": {},
+                                "details": [],
+                                "errors": []
+                            }
+                        ]
+                    },
+                    "success": false
+                },
+                "reason": null,
+                "key": "bW9jay11bm1hdGNoZWQtMA==_bW9jay11bm1hdGNoZWQtMA==_bW9jay11bm1hdGNoZWQtMA==",
+                "expected_status": 404,
+                "observed_status": 404,
+                "passed": true
+            }
+        ],
+        "failed": []
+    },
+    "mock_responses": [
+        {
+            "response": {
+                "confirmation_ref": "FZ-48213",
+                "replacement_days": 5
+            },
+            "input": {
+                "session_token": "SESS-SARAH",
+                "last_four": "4417",
+                "replacement_option": "send_now"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-48213",
+                "replacement_days": 0
+            },
+            "input": {
+                "session_token": "SESS-SARAH",
+                "last_four": "4417",
+                "replacement_option": "colleague_to_arrange"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-48214",
+                "replacement_days": 5
+            },
+            "input": {
+                "session_token": "SESS-SARAH",
+                "last_four": "9025",
+                "replacement_option": "send_now"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-48214",
+                "replacement_days": 0
+            },
+            "input": {
+                "session_token": "SESS-SARAH",
+                "last_four": "9025",
+                "replacement_option": "colleague_to_arrange"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-51877",
+                "replacement_days": 5
+            },
+            "input": {
+                "session_token": "SESS-GEOFF",
+                "last_four": "3381",
+                "replacement_option": "send_now"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-51877",
+                "replacement_days": 0
+            },
+            "input": {
+                "session_token": "SESS-GEOFF",
+                "last_four": "3381",
+                "replacement_option": "colleague_to_arrange"
+            }
+        },
+        {
+            "error": {
+                "code": "conflict",
+                "message": "Card already cancelled.",
+                "details": [],
+                "status": 409
+            },
+            "input": {
+                "session_token": "SESS-PRIYA",
+                "last_four": "7720",
+                "replacement_option": "send_now"
+            }
+        },
+        {
+            "error": {
+                "code": "conflict",
+                "message": "Card already cancelled.",
+                "details": [],
+                "status": 409
+            },
+            "input": {
+                "session_token": "SESS-PRIYA",
+                "last_four": "7720",
+                "replacement_option": "colleague_to_arrange"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-60211",
+                "replacement_days": 5
+            },
+            "input": {
+                "session_token": "SESS-PATRICK",
+                "last_four": "2468",
+                "replacement_option": "send_now"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-60211",
+                "replacement_days": 0
+            },
+            "input": {
+                "session_token": "SESS-PATRICK",
+                "last_four": "2468",
+                "replacement_option": "colleague_to_arrange"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-60212",
+                "replacement_days": 5
+            },
+            "input": {
+                "session_token": "SESS-PATRICK",
+                "last_four": "1357",
+                "replacement_option": "send_now"
+            }
+        },
+        {
+            "response": {
+                "confirmation_ref": "FZ-60212",
+                "replacement_days": 0
+            },
+            "input": {
+                "session_token": "SESS-PATRICK",
+                "last_four": "1357",
+                "replacement_option": "colleague_to_arrange"
+            }
+        }
+    ]
+}

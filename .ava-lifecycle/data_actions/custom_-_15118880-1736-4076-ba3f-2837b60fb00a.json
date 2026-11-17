@@ -1,0 +1,665 @@
+{
+    "id": "custom_-_15118880-1736-4076-ba3f-2837b60fb00a",
+    "published": {
+        "id": "custom_-_15118880-1736-4076-ba3f-2837b60fb00a",
+        "name": "PB-Finanza-Get-Cards",
+        "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+        "category": "AVA-Harness-Mock-Echo-DataAction",
+        "contract": {
+            "output": {
+                "successSchemaUri": "/api/v2/integrations/actions/custom_-_15118880-1736-4076-ba3f-2837b60fb00a/schemas/successschema.json",
+                "errorSchemaUri": "/api/v2/integrations/actions/custom_-_15118880-1736-4076-ba3f-2837b60fb00a/schemas/errorschema.json"
+            },
+            "input": {
+                "inputSchemaUri": "/api/v2/integrations/actions/custom_-_15118880-1736-4076-ba3f-2837b60fb00a/schemas/inputschema.json"
+            }
+        },
+        "version": 1,
+        "secure": false,
+        "config": {
+            "request": {
+                "requestUrlTemplate": "#set($p0 = \"$!{input.session_token}\")#set($k = \"$encoding.base64($p0)\")#set($c = {\"U0VTUy1TQVJBSA==\":\"1\",\"U0VTUy1HRU9GRg==\":\"2\",\"U0VTUy1QUklZQQ==\":\"3\",\"U0VTUy1QQVRSSUNL\":\"4\"})#if($c.containsKey($k))https://postman-echo.com/get?k=${c.get($k)}#{else}https://postman-echo.com/status/401#end",
+                "requestTemplateUri": "/api/v2/integrations/actions/custom_-_15118880-1736-4076-ba3f-2837b60fb00a/requesttemplates/defaultrequest.vm",
+                "requestType": "GET",
+                "headers": {
+                    "Accept": "application/json"
+                }
+            },
+            "response": {
+                "translationMap": {
+                    "mockKey": "$.args.k"
+                },
+                "translationMapDefaults": {
+                    "mockKey": "__unset__"
+                },
+                "successTemplateUri": "/api/v2/integrations/actions/custom_-_15118880-1736-4076-ba3f-2837b60fb00a/templates/successtemplate.vm"
+            }
+        },
+        "selfUri": "/api/v2/integrations/actions/custom_-_15118880-1736-4076-ba3f-2837b60fb00a?includeConfig=true"
+    },
+    "validation": {
+        "passed": [
+            {
+                "mock_id": "case-0",
+                "input": {
+                    "session_token": "SESS-SARAH"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-SARAH",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-SARAH\"}",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=1"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "1"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "dfb94ad6-496b-4a59-88ba-60ee691d1e70",
+                                    "inin-request-id": "c8419fcb-0a3a-4a1d-b380-6700213d159d",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=1"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"1\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"1\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"dfb94ad6-496b-4a59-88ba-60ee691d1e70\",\n    \"inin-request-id\" : \"c8419fcb-0a3a-4a1d-b380-6700213d159d\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=1\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "first_name": "Sarah",
+                                "cards_summary": "Debit card ending 4417 (active); credit card ending 9025 (active)",
+                                "address_line": "12 Elm Grove, Leeds, LS6 2AB"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "first_name": "Sarah",
+                        "cards_summary": "Debit card ending 4417 (active); credit card ending 9025 (active)",
+                        "address_line": "12 Elm Grove, Leeds, LS6 2AB"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "U0VTUy1TQVJBSA==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-1",
+                "input": {
+                    "session_token": "SESS-GEOFF"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-GEOFF",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-GEOFF\"}",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=2"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "2"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "ea340b03-806b-40b5-9b70-69e01eadd1f1",
+                                    "inin-request-id": "ad530393-62c4-4741-ac50-2a1062c054d0",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=2"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"2\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"2\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"ea340b03-806b-40b5-9b70-69e01eadd1f1\",\n    \"inin-request-id\" : \"ad530393-62c4-4741-ac50-2a1062c054d0\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=2\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "first_name": "Geoffrey",
+                                "cards_summary": "Debit card ending 3381 (active)",
+                                "address_line": "4 Harbour Row, Plymouth, PL1 2DN"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "first_name": "Geoffrey",
+                        "cards_summary": "Debit card ending 3381 (active)",
+                        "address_line": "4 Harbour Row, Plymouth, PL1 2DN"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "U0VTUy1HRU9GRg==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-2",
+                "input": {
+                    "session_token": "SESS-PRIYA"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PRIYA",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PRIYA\"}",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=3"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "3"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "e496f3fc-ea0d-46f4-8a2b-5c6db1e68c45",
+                                    "inin-request-id": "d448d038-1752-42fe-b176-727054a5fe21",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=3"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"3\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"3\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"e496f3fc-ea0d-46f4-8a2b-5c6db1e68c45\",\n    \"inin-request-id\" : \"d448d038-1752-42fe-b176-727054a5fe21\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=3\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "first_name": "Priya",
+                                "cards_summary": "Debit card ending 7720 (already cancelled)",
+                                "address_line": "88 Kings Road, Cardiff, CF11 9DF"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "first_name": "Priya",
+                        "cards_summary": "Debit card ending 7720 (already cancelled)",
+                        "address_line": "88 Kings Road, Cardiff, CF11 9DF"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "U0VTUy1QUklZQQ==",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-3",
+                "input": {
+                    "session_token": "SESS-PATRICK"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PATRICK",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"SESS-PATRICK\"}",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=4"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "4"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "39b99ff6-b9c1-4847-a4bb-701b55aca932",
+                                    "inin-request-id": "2380d915-8958-4176-93a4-06350d77646c",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=4"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"4\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"4\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"39b99ff6-b9c1-4847-a4bb-701b55aca932\",\n    \"inin-request-id\" : \"2380d915-8958-4176-93a4-06350d77646c\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=4\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "first_name": "Patrick",
+                                "cards_summary": "Debit card ending 2468 (active); credit card ending 1357 (active)",
+                                "address_line": "21 Rosewood Avenue, Manchester, M20 4QT"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "first_name": "Patrick",
+                        "cards_summary": "Debit card ending 2468 (active); credit card ending 1357 (active)",
+                        "address_line": "21 Rosewood Avenue, Manchester, M20 4QT"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "U0VTUy1QQVRSSUNL",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "default-probe-0",
+                "input": {
+                    "session_token": "mock-unmatched-0"
+                },
+                "outcome": "error",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "session_token": "mock-unmatched-0",
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "rawRequest": "{\"session_token\":\"mock-unmatched-0\"}",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/status/401"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": false,
+                            "error": {
+                                "message": "Unauthorized",
+                                "code": "unauthorized",
+                                "status": 401,
+                                "messageParams": {},
+                                "contextId": "ad43030f-16bc-4437-a963-2cafed0eb5d8",
+                                "details": [
+                                    {
+                                        "errorCode": "ACTION.REMOTE_ENDPOINT"
+                                    }
+                                ],
+                                "errors": [
+                                    {
+                                        "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":401} [ad43030f-16bc-4437-a963-2cafed0eb5d8]",
+                                        "code": "UNAUTHORIZED",
+                                        "status": 401,
+                                        "messageParams": {},
+                                        "details": [],
+                                        "errors": []
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "error": {
+                        "message": "Unauthorized",
+                        "code": "unauthorized",
+                        "status": 401,
+                        "messageParams": {},
+                        "contextId": "ad43030f-16bc-4437-a963-2cafed0eb5d8",
+                        "details": [
+                            {
+                                "errorCode": "ACTION.REMOTE_ENDPOINT"
+                            }
+                        ],
+                        "errors": [
+                            {
+                                "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":401} [ad43030f-16bc-4437-a963-2cafed0eb5d8]",
+                                "code": "UNAUTHORIZED",
+                                "status": 401,
+                                "messageParams": {},
+                                "details": [],
+                                "errors": []
+                            }
+                        ]
+                    },
+                    "success": false
+                },
+                "reason": null,
+                "key": "bW9jay11bm1hdGNoZWQtMA==",
+                "expected_status": 401,
+                "observed_status": 401,
+                "passed": true
+            }
+        ],
+        "failed": []
+    },
+    "mock_responses": [
+        {
+            "response": {
+                "first_name": "Sarah",
+                "cards_summary": "Debit card ending 4417 (active); credit card ending 9025 (active)",
+                "address_line": "12 Elm Grove, Leeds, LS6 2AB"
+            },
+            "input": {
+                "session_token": "SESS-SARAH"
+            }
+        },
+        {
+            "response": {
+                "first_name": "Geoffrey",
+                "cards_summary": "Debit card ending 3381 (active)",
+                "address_line": "4 Harbour Row, Plymouth, PL1 2DN"
+            },
+            "input": {
+                "session_token": "SESS-GEOFF"
+            }
+        },
+        {
+            "response": {
+                "first_name": "Priya",
+                "cards_summary": "Debit card ending 7720 (already cancelled)",
+                "address_line": "88 Kings Road, Cardiff, CF11 9DF"
+            },
+            "input": {
+                "session_token": "SESS-PRIYA"
+            }
+        },
+        {
+            "response": {
+                "first_name": "Patrick",
+                "cards_summary": "Debit card ending 2468 (active); credit card ending 1357 (active)",
+                "address_line": "21 Rosewood Avenue, Manchester, M20 4QT"
+            },
+            "input": {
+                "session_token": "SESS-PATRICK"
+            }
+        }
+    ]
+}

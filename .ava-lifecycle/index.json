@@ -1,0 +1,36 @@
+{
+  "avas": [
+    {
+      "name": "PB_Housing Association",
+      "slug": "pb-housing-association",
+      "agent_id": "c3ba419a-5380-4c48-bec6-f8811fad7485",
+      "gc_version": "10.0",
+      "local_status": "published",
+      "last_updated": "2026-09-23T15:40:00Z"
+    },
+    {
+      "name": "PB - Iris UK Support Assistant",
+      "slug": "pb-iris-uk-support-assistant",
+      "agent_id": "53ea0755-379a-4a9b-8a89-b5a97c8b19d6",
+      "gc_version": "4.0",
+      "local_status": "published",
+      "last_updated": "2026-09-10T09:20:39Z"
+    },
+    {
+      "name": "PB - Lloyds Lost or Stolen Card",
+      "slug": "pb-lloyds-lost-or-stolen-card",
+      "agent_id": "4294d7d3-d567-40fb-8f05-7b42952d916e",
+      "gc_version": "4.0",
+      "local_status": "published",
+      "last_updated": "2026-11-04T15:51:53Z"
+    },
+    {
+      "name": "PB - Finanza Lost or Stolen Card",
+      "slug": "pb-finanza-lost-or-stolen-card",
+      "agent_id": "58fe59e3-5b8b-4a4f-ac1c-4dd492998626",
+      "gc_version": "6.0",
+      "local_status": "test-ready",
+      "last_updated": "2026-11-17T16:43:24Z"
+    }
+  ]
+}

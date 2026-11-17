@@ -1,0 +1,655 @@
+{
+    "id": "custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489",
+    "published": {
+        "id": "custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489",
+        "name": "PB-Finanza-Verify-Customer",
+        "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+        "category": "AVA-Harness-Mock-Echo-DataAction",
+        "contract": {
+            "output": {
+                "successSchemaUri": "/api/v2/integrations/actions/custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489/schemas/successschema.json",
+                "errorSchemaUri": "/api/v2/integrations/actions/custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489/schemas/errorschema.json"
+            },
+            "input": {
+                "inputSchemaUri": "/api/v2/integrations/actions/custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489/schemas/inputschema.json"
+            }
+        },
+        "version": 1,
+        "secure": false,
+        "config": {
+            "request": {
+                "requestUrlTemplate": "#set($p0 = \"$!{input.date_of_birth}\")#set($p1 = \"$!{input.phone_number}\")#set($k = \"$encoding.base64($p0)_$encoding.base64($p1)\")#set($c = {\"MTk4Ni0wMy0xNA==_MDc3MDA5MDAxMjM=\":\"1\",\"MTk1Mi0xMS0wMg==_MDc3MDA5MDA0NTY=\":\"2\",\"MTk5OS0wNy0yMQ==_MDc3MDA5MDA3ODk=\":\"3\",\"MTk3NS0wMS0wMQ==_MDc1ODYwODY3MjQ=\":\"4\"})#if($c.containsKey($k))https://postman-echo.com/get?k=${c.get($k)}#{else}https://postman-echo.com/status/404#end",
+                "requestTemplateUri": "/api/v2/integrations/actions/custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489/requesttemplates/defaultrequest.vm",
+                "requestType": "GET",
+                "headers": {
+                    "Accept": "application/json"
+                }
+            },
+            "response": {
+                "translationMap": {
+                    "mockKey": "$.args.k"
+                },
+                "translationMapDefaults": {
+                    "mockKey": "__unset__"
+                },
+                "successTemplateUri": "/api/v2/integrations/actions/custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489/templates/successtemplate.vm"
+            }
+        },
+        "selfUri": "/api/v2/integrations/actions/custom_-_3e66fbf0-bfed-4b9b-957e-63d3cc761489?includeConfig=true"
+    },
+    "validation": {
+        "passed": [
+            {
+                "mock_id": "case-0",
+                "input": {
+                    "phone_number": "07700900123",
+                    "date_of_birth": "1986-03-14"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "phone_number": "07700900123",
+                                "rawRequest": "{\"phone_number\":\"07700900123\",\"date_of_birth\":\"1986-03-14\"}",
+                                "date_of_birth": "1986-03-14",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=1"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "1"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "28a2661c-0ed0-4332-a17a-9e4fc0b52b77",
+                                    "inin-request-id": "cd1e67bc-b5df-46ee-9fa1-415f97bd40cf",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=1"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"1\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"1\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"28a2661c-0ed0-4332-a17a-9e4fc0b52b77\",\n    \"inin-request-id\" : \"cd1e67bc-b5df-46ee-9fa1-415f97bd40cf\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=1\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-SARAH"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "session_token": "SESS-SARAH"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MTk4Ni0wMy0xNA==_MDc3MDA5MDAxMjM=",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-1",
+                "input": {
+                    "phone_number": "07700900456",
+                    "date_of_birth": "1952-11-02"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "phone_number": "07700900456",
+                                "rawRequest": "{\"phone_number\":\"07700900456\",\"date_of_birth\":\"1952-11-02\"}",
+                                "date_of_birth": "1952-11-02",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=2"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "2"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "b3794fe1-95fa-4f76-a4f0-333ee3c2d8f6",
+                                    "inin-request-id": "b0111375-5937-4ff5-8e73-d9f099308425",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=2"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"2\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"2\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"b3794fe1-95fa-4f76-a4f0-333ee3c2d8f6\",\n    \"inin-request-id\" : \"b0111375-5937-4ff5-8e73-d9f099308425\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=2\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-GEOFF"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "session_token": "SESS-GEOFF"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MTk1Mi0xMS0wMg==_MDc3MDA5MDA0NTY=",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-2",
+                "input": {
+                    "phone_number": "07700900789",
+                    "date_of_birth": "1999-07-21"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "phone_number": "07700900789",
+                                "rawRequest": "{\"phone_number\":\"07700900789\",\"date_of_birth\":\"1999-07-21\"}",
+                                "date_of_birth": "1999-07-21",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=3"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "3"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "50af88ed-f178-44f7-a59d-8fd32f422eb9",
+                                    "inin-request-id": "31fafa23-3921-431a-8db1-459c22a1f54b",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=3"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"3\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"3\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"50af88ed-f178-44f7-a59d-8fd32f422eb9\",\n    \"inin-request-id\" : \"31fafa23-3921-431a-8db1-459c22a1f54b\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=3\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PRIYA"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "session_token": "SESS-PRIYA"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MTk5OS0wNy0yMQ==_MDc3MDA5MDA3ODk=",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "case-3",
+                "input": {
+                    "phone_number": "07586086724",
+                    "date_of_birth": "1975-01-01"
+                },
+                "outcome": "response",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "phone_number": "07586086724",
+                                "rawRequest": "{\"phone_number\":\"07586086724\",\"date_of_birth\":\"1975-01-01\"}",
+                                "date_of_birth": "1975-01-01",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/get?k=4"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": true,
+                            "result": {
+                                "args": {
+                                    "k": "4"
+                                },
+                                "headers": {
+                                    "host": "postman-echo.com",
+                                    "inin-correlation-id": "ce9089dc-117d-4ad9-b0f9-7688ee41c9a6",
+                                    "inin-request-id": "ee0c28d4-1b4e-4f7d-af3b-e8e8284cf415",
+                                    "content-type": "application/json",
+                                    "accept-encoding": "gzip, br",
+                                    "x-forwarded-proto": "https",
+                                    "user-agent": "PureCloud-Data-Actions",
+                                    "accept": "application/json",
+                                    "inin-organization-id": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                                },
+                                "url": "https://postman-echo.com/get?k=4"
+                            }
+                        },
+                        {
+                            "step": 9,
+                            "name": "Resolve translation map",
+                            "success": true,
+                            "result": {
+                                "mockKey": "\"4\"",
+                                "rawResult": "{\n  \"args\" : {\n    \"k\" : \"4\"\n  },\n  \"headers\" : {\n    \"host\" : \"postman-echo.com\",\n    \"inin-correlation-id\" : \"ce9089dc-117d-4ad9-b0f9-7688ee41c9a6\",\n    \"inin-request-id\" : \"ee0c28d4-1b4e-4f7d-af3b-e8e8284cf415\",\n    \"content-type\" : \"application/json\",\n    \"accept-encoding\" : \"gzip, br\",\n    \"x-forwarded-proto\" : \"https\",\n    \"user-agent\" : \"PureCloud-Data-Actions\",\n    \"accept\" : \"application/json\",\n    \"inin-organization-id\" : \"0144ffd9-4396-4360-9feb-aa8c8d18f7b5\"\n  },\n  \"url\" : \"https://postman-echo.com/get?k=4\"\n}"
+                            }
+                        },
+                        {
+                            "step": 10,
+                            "name": "Apply output transformation",
+                            "success": true,
+                            "result": {
+                                "session_token": "SESS-PATRICK"
+                            }
+                        },
+                        {
+                            "step": 11,
+                            "name": "Validate output against schema",
+                            "success": true
+                        }
+                    ],
+                    "finalResult": {
+                        "session_token": "SESS-PATRICK"
+                    },
+                    "success": true
+                },
+                "reason": null,
+                "key": "MTk3NS0wMS0wMQ==_MDc1ODYwODY3MjQ=",
+                "expected_status": 200,
+                "observed_status": 200,
+                "passed": true
+            },
+            {
+                "mock_id": "default-probe-0",
+                "input": {
+                    "date_of_birth": "mock-unmatched-0",
+                    "phone_number": "mock-unmatched-0"
+                },
+                "outcome": "error",
+                "result": {
+                    "operations": [
+                        {
+                            "step": 1,
+                            "name": "Validate request body contains simple json (key-value pairs)",
+                            "success": true,
+                            "result": {
+                                "integrationId": "8563561a-d0b4-4c77-b62b-b2726c6addf9",
+                                "phone_number": "mock-unmatched-0",
+                                "rawRequest": "{\"date_of_birth\":\"mock-unmatched-0\",\"phone_number\":\"mock-unmatched-0\"}",
+                                "date_of_birth": "mock-unmatched-0",
+                                "orgId": "0144ffd9-4396-4360-9feb-aa8c8d18f7b5"
+                            }
+                        },
+                        {
+                            "step": 2,
+                            "name": "Validate draft definition",
+                            "success": true
+                        },
+                        {
+                            "step": 3,
+                            "name": "Validate request body against simple input schema",
+                            "success": true
+                        },
+                        {
+                            "step": 4,
+                            "name": "Perform authentication",
+                            "success": true
+                        },
+                        {
+                            "step": 5,
+                            "name": "Resolve request URL template",
+                            "success": true,
+                            "result": "[GET] https://postman-echo.com/status/404"
+                        },
+                        {
+                            "step": 6,
+                            "name": "Resolve request header templates",
+                            "success": true,
+                            "result": {
+                                "Accept": [
+                                    "application/json"
+                                ]
+                            }
+                        },
+                        {
+                            "step": 7,
+                            "name": "Resolve request body template",
+                            "success": true,
+                            "result": ""
+                        },
+                        {
+                            "step": 8,
+                            "name": "Execute",
+                            "success": false,
+                            "error": {
+                                "message": "Not Found",
+                                "code": "not.found",
+                                "status": 404,
+                                "messageParams": {},
+                                "contextId": "f18da182-a7e7-4b1c-8e8d-010f7267ac9c",
+                                "details": [
+                                    {
+                                        "errorCode": "ACTION.REMOTE_ENDPOINT"
+                                    }
+                                ],
+                                "errors": [
+                                    {
+                                        "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":404} [f18da182-a7e7-4b1c-8e8d-010f7267ac9c]",
+                                        "code": "NOT_FOUND",
+                                        "status": 404,
+                                        "messageParams": {},
+                                        "details": [],
+                                        "errors": []
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "error": {
+                        "message": "Not Found",
+                        "code": "not.found",
+                        "status": 404,
+                        "messageParams": {},
+                        "contextId": "f18da182-a7e7-4b1c-8e8d-010f7267ac9c",
+                        "details": [
+                            {
+                                "errorCode": "ACTION.REMOTE_ENDPOINT"
+                            }
+                        ],
+                        "errors": [
+                            {
+                                "message": "REST call for action execute failed. Message: Request to backend service failed. Response from web service: {\"status\":404} [f18da182-a7e7-4b1c-8e8d-010f7267ac9c]",
+                                "code": "NOT_FOUND",
+                                "status": 404,
+                                "messageParams": {},
+                                "details": [],
+                                "errors": []
+                            }
+                        ]
+                    },
+                    "success": false
+                },
+                "reason": null,
+                "key": "bW9jay11bm1hdGNoZWQtMA==_bW9jay11bm1hdGNoZWQtMA==",
+                "expected_status": 404,
+                "observed_status": 404,
+                "passed": true
+            }
+        ],
+        "failed": []
+    },
+    "mock_responses": [
+        {
+            "response": {
+                "session_token": "SESS-SARAH"
+            },
+            "input": {
+                "phone_number": "07700900123",
+                "date_of_birth": "1986-03-14"
+            }
+        },
+        {
+            "response": {
+                "session_token": "SESS-GEOFF"
+            },
+            "input": {
+                "phone_number": "07700900456",
+                "date_of_birth": "1952-11-02"
+            }
+        },
+        {
+            "response": {
+                "session_token": "SESS-PRIYA"
+            },
+            "input": {
+                "phone_number": "07700900789",
+                "date_of_birth": "1999-07-21"
+            }
+        },
+        {
+            "response": {
+                "session_token": "SESS-PATRICK"
+            },
+            "input": {
+                "phone_number": "07586086724",
+                "date_of_birth": "1975-01-01"
+            }
+        }
+    ]
+}

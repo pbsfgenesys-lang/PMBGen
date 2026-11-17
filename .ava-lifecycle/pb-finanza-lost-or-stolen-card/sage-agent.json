@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "slug": "pb-finanza-lost-or-stolen-card",
+    "agent_id": "58fe59e3-5b8b-4a4f-ac1c-4dd492998626",
+    "gc_version": "6.0",
+    "last_synced_at": "2026-11-17T16:43:24Z"
+  },
+  "agent_name": "PB - Finanza Lost or Stolen Card",
+  "version": "6.0",
+  "publish_status": "TestReady"
+}
